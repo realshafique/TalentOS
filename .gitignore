@@ -1,0 +1,19 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+frontend/dist/
+frontend/build/
+
+# Secrets - never commit these
+.env
+.env.*
+!.env.example
+
+# Editor / OS
+.vscode/
+Thumbs.db
