@@ -25,6 +25,11 @@ class Profile(Base):
         nullable=False
     )
 
+    phone = Column(
+        String(20),
+        nullable=True
+    )
+
     degree = Column(
         String(200),
         nullable=False
@@ -96,4 +101,69 @@ class Project(Base):
     profile = relationship(
         "Profile",
         back_populates="projects"
+    )
+
+
+class Team(Base):
+
+    __tablename__ = "teams"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    name = Column(
+        String(200),
+        nullable=False
+    )
+
+    project = Column(
+        String(300),
+        nullable=False
+    )
+
+    members = relationship(
+        "TeamMember",
+        back_populates="team",
+        cascade="all, delete-orphan"
+    )
+
+
+class TeamMember(Base):
+
+    __tablename__ = "team_members"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    team_id = Column(
+        Integer,
+        ForeignKey("teams.id"),
+        nullable=False
+    )
+
+    profile_id = Column(
+        Integer,
+        ForeignKey("profiles.id"),
+        nullable=False
+    )
+
+    role = Column(
+        String(100),
+        nullable=False,
+        default="Member"
+    )
+
+    team = relationship(
+        "Team",
+        back_populates="members"
+    )
+
+    profile = relationship(
+        "Profile"
     )

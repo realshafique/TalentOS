@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
+
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 type Project = {
   id: number;
@@ -12,6 +14,7 @@ type Project = {
 type Profile = {
   name: string;
   email: string;
+  phone: string;
   degree: string;
   year: string;
   about: string;
@@ -21,55 +24,128 @@ type Profile = {
   availability: string;
 };
 
+const emptyProfile: Profile = {
+  name: "",
+  email: "",
+  phone: "",
+  degree: "",
+  year: "",
+  about: "",
+  skills: [],
+  interests: [],
+  projects: [
+    {
+      id: 1,
+      name: "",
+      description: "",
+      technologies: "",
+    },
+  ],
+  availability: "Available",
+};
+
 function CreateProfile() {
-  const [profile, setProfile] = useState<Profile>({
-    name: "",
-    email: "",
-    degree: "",
-    year: "",
-    about: "",
-    skills: ["Python", "Machine Learning", "React"],
-    interests: ["Artificial Intelligence"],
-    projects: [
-      {
-        id: 1,
-        name: "",
-        description: "",
-        technologies: "",
-      },
-    ],
-    availability: "Available",
-  });
+  const [profile, setProfile] = useState<Profile>(emptyProfile);
+
+  const [profileId, setProfileId] = useState<number | null>(null);
 
   const [skillInput, setSkillInput] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [interestInput, setInterestInput] = useState("");
 
-  const availableInterests = [
-    "Artificial Intelligence",
-    "Web Development",
-    "Data Science",
-    "Cybersecurity",
-    "Open Source",
-    "Hackathons",
-  ];
+  const [loading, setLoading] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
 
-  // -----------------------------
-  // Update Profile
-  // -----------------------------
+  const [isEditing, setIsEditing] = useState(false);
 
-  const updateProfile = (
-    field: keyof Profile,
-    value: string
+  useEffect(() => {
+    const savedProfileId = localStorage.getItem("talentos_profile_id");
+
+    if (!savedProfileId) {
+      setLoadingProfile(false);
+      return;
+    }
+
+    const id = Number(savedProfileId);
+
+    if (!id) {
+      setLoadingProfile(false);
+      return;
+    }
+
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get(
+          "http://127.0.0.1:8000/profiles"
+        );
+
+        const profiles = response.data;
+
+        const existingProfile = profiles.find(
+          (item: any) => item.id === id
+        );
+
+        if (existingProfile) {
+          setProfileId(id);
+
+          setProfile({
+            name: existingProfile.name || "",
+            email: existingProfile.email || "",
+            phone: existingProfile.phone || "",
+            degree: existingProfile.degree || "",
+            year: existingProfile.year || "",
+            about: existingProfile.about || "",
+            skills: existingProfile.skills
+              ? existingProfile.skills
+                  .split(",")
+                  .map((skill: string) => skill.trim())
+                  .filter(Boolean)
+              : [],
+            interests: existingProfile.interests
+              ? existingProfile.interests
+                  .split(",")
+                  .map((interest: string) => interest.trim())
+                  .filter(Boolean)
+              : [],
+            projects:
+              existingProfile.projects &&
+              existingProfile.projects.length > 0
+                ? existingProfile.projects
+                : [
+                    {
+                      id: Date.now(),
+                      name: "",
+                      description: "",
+                      technologies: "",
+                    },
+                  ],
+            availability:
+              existingProfile.availability || "Available",
+          });
+
+          setIsEditing(true);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoadingProfile(false);
+      }
+    };
+
+    fetchProfile();
+  }, []);
+
+  const handleChange = (
+    event: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
+    const { name, value } = event.target;
+
     setProfile((previousProfile) => ({
       ...previousProfile,
-      [field]: value,
+      [name]: value,
     }));
   };
-
-  // -----------------------------
-  // Add Skill
-  // -----------------------------
 
   const addSkill = () => {
     const skill = skillInput.trim();
@@ -78,134 +154,115 @@ function CreateProfile() {
       return;
     }
 
-    const skillExists = profile.skills.some(
+    const alreadyExists = profile.skills.some(
       (existingSkill) =>
         existingSkill.toLowerCase() === skill.toLowerCase()
     );
 
-    if (skillExists) {
+    if (alreadyExists) {
       setSkillInput("");
       return;
     }
 
     setProfile((previousProfile) => ({
       ...previousProfile,
-      skills: [
-        ...previousProfile.skills,
-        skill,
-      ],
+      skills: [...previousProfile.skills, skill],
     }));
 
     setSkillInput("");
   };
 
-  // -----------------------------
-  // Remove Skill
-  // -----------------------------
-
   const removeSkill = (skillToRemove: string) => {
     setProfile((previousProfile) => ({
       ...previousProfile,
-
       skills: previousProfile.skills.filter(
         (skill) => skill !== skillToRemove
       ),
     }));
   };
 
-  // -----------------------------
-  // Toggle Interest
-  // -----------------------------
+  const addInterest = () => {
+    const interest = interestInput.trim();
 
-  const toggleInterest = (interest: string) => {
-    setProfile((previousProfile) => {
-      const alreadySelected =
-        previousProfile.interests.includes(interest);
+    if (!interest) {
+      return;
+    }
 
-      return {
-        ...previousProfile,
+    const alreadyExists = profile.interests.some(
+      (existingInterest) =>
+        existingInterest.toLowerCase() ===
+        interest.toLowerCase()
+    );
 
-        interests: alreadySelected
-          ? previousProfile.interests.filter(
-              (item) => item !== interest
-            )
-          : [
-              ...previousProfile.interests,
-              interest,
-            ],
-      };
-    });
-  };
-
-  // -----------------------------
-  // Add Project
-  // -----------------------------
-
-  const addProject = () => {
-    const newProject: Project = {
-      id: Date.now(),
-      name: "",
-      description: "",
-      technologies: "",
-    };
-
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-
-      projects: [
-        ...previousProfile.projects,
-        newProject,
-      ],
-    }));
-  };
-
-  // -----------------------------
-  // Remove Project
-  // -----------------------------
-
-  const removeProject = (id: number) => {
-    if (profile.projects.length === 1) {
+    if (alreadyExists) {
+      setInterestInput("");
       return;
     }
 
     setProfile((previousProfile) => ({
       ...previousProfile,
+      interests: [...previousProfile.interests, interest],
+    }));
 
-      projects: previousProfile.projects.filter(
-        (project) => project.id !== id
+    setInterestInput("");
+  };
+
+  const removeInterest = (interestToRemove: string) => {
+    setProfile((previousProfile) => ({
+      ...previousProfile,
+      interests: previousProfile.interests.filter(
+        (interest) => interest !== interestToRemove
       ),
     }));
   };
 
-  // -----------------------------
-  // Update Project
-  // -----------------------------
-
-  const updateProject = (
+  const handleProjectChange = (
     id: number,
     field: keyof Project,
     value: string
   ) => {
     setProfile((previousProfile) => ({
       ...previousProfile,
-
-      projects: previousProfile.projects.map(
-        (project) =>
-          project.id === id
-            ? {
-                ...project,
-                [field]: value,
-              }
-            : project
+      projects: previousProfile.projects.map((project) =>
+        project.id === id
+          ? {
+              ...project,
+              [field]: value,
+            }
+          : project
       ),
     }));
   };
 
-  // -----------------------------
-  // Submit Profile
-  // -----------------------------
+  const addProject = () => {
+    setProfile((previousProfile) => ({
+      ...previousProfile,
+      projects: [
+        ...previousProfile.projects,
+        {
+          id: Date.now(),
+          name: "",
+          description: "",
+          technologies: "",
+        },
+      ],
+    }));
+  };
 
-  const handleSubmit = async () => {
+  const removeProject = (id: number) => {
+    setProfile((previousProfile) => ({
+      ...previousProfile,
+      projects: previousProfile.projects.filter(
+        (project) => project.id !== id
+      ),
+    }));
+  };
+
+  const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
     if (!profile.name.trim()) {
       alert("Please enter your name.");
       return;
@@ -216,419 +273,468 @@ function CreateProfile() {
       return;
     }
 
-    if (!profile.degree.trim()) {
-      alert("Please enter your degree or program.");
+    if (!profile.phone.trim()) {
+      alert("Please enter your phone number.");
       return;
     }
 
-    if (!profile.year) {
+    if (!profile.degree.trim()) {
+      alert("Please enter your degree.");
+      return;
+    }
+
+    if (!profile.year.trim()) {
       alert("Please select your year.");
       return;
     }
 
-    setIsSubmitting(true);
+    if (profile.skills.length === 0) {
+      alert("Please add at least one skill.");
+      return;
+    }
 
     try {
-      const response = await axios.post(
-        "http://127.0.0.1:8000/profiles",
-        profile
-      );
+      setLoading(true);
 
-      console.log(
-        "Server response:",
-        response.data
-      );
+      let response;
 
-      alert("Profile created successfully!");
+      if (isEditing && profileId) {
+        response = await axios.put(
+          `http://127.0.0.1:8000/profiles/${profileId}`,
+          profile
+        );
 
+        alert("Profile updated successfully!");
+      } else {
+        response = await axios.post(
+          "http://127.0.0.1:8000/profiles",
+          profile
+        );
+
+        const newProfileId = response.data.profile.id;
+
+        localStorage.setItem(
+          "talentos_profile_id",
+          String(newProfileId)
+        );
+
+        setProfileId(newProfileId);
+        setIsEditing(true);
+
+        alert("Profile created successfully!");
+      }
+
+      console.log(response.data);
     } catch (error) {
+      console.error(error);
 
-      console.error(
-        "Error creating profile:",
-        error
-      );
-
-      alert(
-        "Failed to create profile. Make sure the FastAPI server is running."
-      );
-
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.detail) {
+          alert(error.response.data.detail);
+        } else {
+          alert(
+            isEditing
+              ? "Failed to update profile."
+              : "Failed to create profile."
+          );
+        }
+      } else {
+        alert("Something went wrong.");
+      }
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
+  if (loadingProfile) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+
+        <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
+            <p className="text-sm text-slate-500">
+              Loading profile...
+            </p>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
-
       <Navbar />
 
-      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
 
-        {/* Header */}
-
-        <section>
-
-          <p className="text-sm font-medium tracking-wide text-slate-500">
-            YOUR PROFILE
+        <div className="max-w-2xl">
+          <p className="text-sm font-medium text-slate-500">
+            TalentOS
           </p>
 
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-            Create your TalentOS profile
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+            {isEditing ? "Update your profile" : "Create your profile"}
           </h1>
 
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
-            Tell people what you can build, what you know and what
-            kind of projects you want to work on.
+          <p className="mt-4 leading-7 text-slate-600">
+            Tell other students about your skills, interests and
+            projects so TalentOS can help find relevant teammates.
           </p>
+        </div>
 
-        </section>
+        <form
+          onSubmit={handleSubmit}
+          className="mt-8 space-y-6"
+        >
 
-        {/* Basic Information */}
+          {/* BASIC INFORMATION */}
 
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
 
-          <div>
-
-            <h2 className="font-semibold text-slate-950">
+            <h2 className="text-lg font-semibold text-slate-950">
               Basic information
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Basic details about you.
-            </p>
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
 
-          </div>
+              <div>
+                <label
+                  htmlFor="name"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Full name
+                </label>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={profile.name}
+                  onChange={handleChange}
+                  placeholder="Enter your name"
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                />
+              </div>
 
-            {/* Full Name */}
+              <div>
+                <label
+                  htmlFor="degree"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Degree
+                </label>
 
-            <div>
+                <input
+                  id="degree"
+                  name="degree"
+                  type="text"
+                  value={profile.degree}
+                  onChange={handleChange}
+                  placeholder="B.Tech Computer Science - AI"
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                />
+              </div>
 
-              <label className="text-sm font-medium text-slate-700">
-                Full name
-              </label>
+              <div>
+                <label
+                  htmlFor="year"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Year
+                </label>
 
-              <input
-                type="text"
-                value={profile.name}
-                onChange={(event) =>
-                  updateProfile(
-                    "name",
-                    event.target.value
-                  )
-                }
-                placeholder="Enter your name"
-                className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
-              />
+                <select
+                  id="year"
+                  name="year"
+                  value={profile.year}
+                  onChange={handleChange}
+                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
+                >
+                  <option value="">
+                    Select year
+                  </option>
 
-            </div>
+                  <option value="1st Year">
+                    1st Year
+                  </option>
 
-            {/* Email */}
+                  <option value="2nd Year">
+                    2nd Year
+                  </option>
 
-            <div>
+                  <option value="3rd Year">
+                    3rd Year
+                  </option>
 
-              <label className="text-sm font-medium text-slate-700">
-                Email
-              </label>
-
-              <input
-                type="email"
-                value={profile.email}
-                onChange={(event) =>
-                  updateProfile(
-                    "email",
-                    event.target.value
-                  )
-                }
-                placeholder="you@example.com"
-                className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
-              />
-
-            </div>
-
-            {/* Degree */}
-
-            <div>
-
-              <label className="text-sm font-medium text-slate-700">
-                Degree / Program
-              </label>
-
-              <input
-                type="text"
-                value={profile.degree}
-                onChange={(event) =>
-                  updateProfile(
-                    "degree",
-                    event.target.value
-                  )
-                }
-                placeholder="e.g. B.Tech Computer Science - AI"
-                className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
-              />
-
-            </div>
-
-            {/* Year */}
-
-            <div>
-
-              <label className="text-sm font-medium text-slate-700">
-                Year
-              </label>
-
-              <select
-                value={profile.year}
-                onChange={(event) =>
-                  updateProfile(
-                    "year",
-                    event.target.value
-                  )
-                }
-                className="mt-2 w-full rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-slate-400"
-              >
-
-                <option value="">
-                  Select year
-                </option>
-
-                <option value="1st Year">
-                  1st Year
-                </option>
-
-                <option value="2nd Year">
-                  2nd Year
-                </option>
-
-                <option value="3rd Year">
-                  3rd Year
-                </option>
-
-                <option value="4th Year">
-                  4th Year
-                </option>
-
-              </select>
+                  <option value="4th Year">
+                    4th Year
+                  </option>
+                </select>
+              </div>
 
             </div>
+          </section>
 
-          </div>
 
-        </section>
+          {/* CONTACT INFORMATION */}
 
-        {/* About */}
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
 
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-lg font-semibold text-slate-950">
+              Contact information
+            </h2>
 
-          <div>
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
 
-            <h2 className="font-semibold text-slate-950">
+              <div>
+                <label
+                  htmlFor="email"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Email
+                </label>
+
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={profile.email}
+                  onChange={handleChange}
+                  placeholder="you@example.com"
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="phone"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  Phone number
+                </label>
+
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={profile.phone}
+                  onChange={handleChange}
+                  placeholder="+91 9876543210"
+                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                />
+              </div>
+
+            </div>
+          </section>
+
+
+          {/* ABOUT */}
+
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
+
+            <h2 className="text-lg font-semibold text-slate-950">
               About you
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Describe yourself, your experience and what you enjoy building.
-            </p>
+            <textarea
+              name="about"
+              value={profile.about}
+              onChange={handleChange}
+              rows={5}
+              placeholder="Tell us about yourself, your experience and what you like building..."
+              className="mt-4 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+            />
 
-          </div>
+          </section>
 
-          <textarea
-            rows={6}
-            value={profile.about}
-            onChange={(event) =>
-              updateProfile(
-                "about",
-                event.target.value
-              )
-            }
-            placeholder="Example: I'm interested in machine learning and building AI-powered applications..."
-            className="mt-6 w-full resize-none rounded-lg border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition focus:border-slate-400"
-          />
 
-        </section>
+          {/* SKILLS */}
 
-        {/* Skills */}
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
 
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-
-          <div>
-
-            <h2 className="font-semibold text-slate-950">
+            <h2 className="text-lg font-semibold text-slate-950">
               Skills
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Add the technologies and skills you can contribute.
-            </p>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
 
-          </div>
-
-          <input
-            type="text"
-            value={skillInput}
-            onChange={(event) =>
-              setSkillInput(event.target.value)
-            }
-            onKeyDown={(event) => {
-
-              if (event.key === "Enter") {
-                event.preventDefault();
-                addSkill();
-              }
-
-            }}
-            placeholder="Type a skill and press Enter"
-            className="mt-6 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-slate-400"
-          />
-
-          <div className="mt-4 flex flex-wrap gap-2">
-
-            {profile.skills.map((skill) => (
+              <input
+                type="text"
+                value={skillInput}
+                onChange={(event) =>
+                  setSkillInput(event.target.value)
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addSkill();
+                  }
+                }}
+                placeholder="e.g. Python"
+                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+              />
 
               <button
-                key={skill}
                 type="button"
-                onClick={() =>
-                  removeSkill(skill)
-                }
-                className="rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700 hover:bg-slate-200"
+                onClick={addSkill}
+                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
               >
-                {skill} ×
+                Add skill
               </button>
-
-            ))}
-
-          </div>
-
-          <p className="mt-4 text-xs text-slate-400">
-            Press Enter to add a skill. Click a skill to remove it.
-          </p>
-
-        </section>
-
-        {/* Interests */}
-
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-
-          <div>
-
-            <h2 className="font-semibold text-slate-950">
-              Interests
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              What kind of things do you want to work on?
-            </p>
-
-          </div>
-
-          <div className="mt-6 flex flex-wrap gap-2">
-
-            {availableInterests.map(
-              (interest) => {
-
-                const selected =
-                  profile.interests.includes(
-                    interest
-                  );
-
-                return (
-
-                  <button
-                    key={interest}
-                    type="button"
-                    onClick={() =>
-                      toggleInterest(
-                        interest
-                      )
-                    }
-                    className={
-                      selected
-                        ? "rounded-full bg-slate-900 px-4 py-2 text-sm text-white"
-                        : "rounded-full border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-                    }
-                  >
-                    {interest}
-                  </button>
-
-                );
-              }
-            )}
-
-          </div>
-
-        </section>
-
-        {/* Projects */}
-
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-            <div>
-
-              <h2 className="font-semibold text-slate-950">
-                Projects
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Show what you've actually built.
-              </p>
 
             </div>
 
-            <button
-              type="button"
-              onClick={addProject}
-              className="w-fit rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              + Add project
-            </button>
+            {profile.skills.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
 
-          </div>
+                {profile.skills.map((skill) => (
+                  <span
+                    key={skill}
+                    className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
+                  >
+                    {skill}
 
-          <div className="mt-6 space-y-5">
+                    <button
+                      type="button"
+                      onClick={() => removeSkill(skill)}
+                      className="font-medium text-slate-400 hover:text-red-500"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
 
-            {profile.projects.map(
-              (project, index) => (
+              </div>
+            )}
+
+          </section>
+
+
+          {/* INTERESTS */}
+
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
+
+            <h2 className="text-lg font-semibold text-slate-950">
+              Interests
+            </h2>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+
+              <input
+                type="text"
+                value={interestInput}
+                onChange={(event) =>
+                  setInterestInput(event.target.value)
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addInterest();
+                  }
+                }}
+                placeholder="e.g. Artificial Intelligence"
+                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+              />
+
+              <button
+                type="button"
+                onClick={addInterest}
+                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Add interest
+              </button>
+
+            </div>
+
+            {profile.interests.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+
+                {profile.interests.map((interest) => (
+                  <span
+                    key={interest}
+                    className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
+                  >
+                    {interest}
+
+                    <button
+                      type="button"
+                      onClick={() => removeInterest(interest)}
+                      className="font-medium text-slate-400 hover:text-red-500"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+
+              </div>
+            )}
+
+          </section>
+
+
+          {/* PROJECTS */}
+
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">
+                  Projects
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                  Add projects you have worked on.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={addProject}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                Add project
+              </button>
+
+            </div>
+
+            <div className="mt-6 space-y-5">
+
+              {profile.projects.map((project, index) => (
 
                 <div
                   key={project.id}
-                  className="rounded-xl border border-slate-200 p-5"
+                  className="rounded-lg border border-slate-200 p-5"
                 >
 
                   <div className="flex items-center justify-between">
 
-                    <h3 className="text-sm font-semibold text-slate-950">
+                    <h3 className="font-medium text-slate-900">
                       Project {index + 1}
                     </h3>
 
                     {profile.projects.length > 1 && (
-
                       <button
                         type="button"
                         onClick={() =>
-                          removeProject(
-                            project.id
-                          )
+                          removeProject(project.id)
                         }
-                        className="text-xs text-slate-400 hover:text-red-500"
+                        className="text-sm text-red-500 hover:text-red-700"
                       >
                         Remove
                       </button>
-
                     )}
 
                   </div>
 
-                  <div className="mt-5 grid gap-5">
-
-                    {/* Project Name */}
+                  <div className="mt-4 space-y-4">
 
                     <div>
 
-                      <label className="text-sm font-medium text-slate-700">
+                      <label className="text-sm font-medium text-slate-900">
                         Project name
                       </label>
 
@@ -636,66 +742,58 @@ function CreateProfile() {
                         type="text"
                         value={project.name}
                         onChange={(event) =>
-                          updateProject(
+                          handleProjectChange(
                             project.id,
                             "name",
                             event.target.value
                           )
                         }
-                        placeholder="e.g. AI Resume Analyzer"
-                        className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                        placeholder="AI Resume Analyzer"
+                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
 
                     </div>
 
-                    {/* Description */}
-
                     <div>
 
-                      <label className="text-sm font-medium text-slate-700">
+                      <label className="text-sm font-medium text-slate-900">
                         Description
                       </label>
 
                       <textarea
-                        rows={4}
-                        value={
-                          project.description
-                        }
+                        value={project.description}
                         onChange={(event) =>
-                          updateProject(
+                          handleProjectChange(
                             project.id,
                             "description",
                             event.target.value
                           )
                         }
-                        placeholder="What did you build? What problem does it solve?"
-                        className="mt-2 w-full resize-none rounded-lg border border-slate-200 px-4 py-3 text-sm leading-6 outline-none focus:border-slate-400"
+                        rows={4}
+                        placeholder="Describe what you built..."
+                        className="mt-2 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
 
                     </div>
 
-                    {/* Technologies */}
-
                     <div>
 
-                      <label className="text-sm font-medium text-slate-700">
+                      <label className="text-sm font-medium text-slate-900">
                         Technologies
                       </label>
 
                       <input
                         type="text"
-                        value={
-                          project.technologies
-                        }
+                        value={project.technologies}
                         onChange={(event) =>
-                          updateProject(
+                          handleProjectChange(
                             project.id,
                             "technologies",
                             event.target.value
                           )
                         }
-                        placeholder="e.g. Python, FastAPI, React"
-                        className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-3 text-sm outline-none focus:border-slate-400"
+                        placeholder="Python, FastAPI, React"
+                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
 
                     </div>
@@ -704,92 +802,72 @@ function CreateProfile() {
 
                 </div>
 
-              )
-            )}
+              ))}
 
-          </div>
+            </div>
 
-        </section>
+          </section>
 
-        {/* Availability */}
 
-        <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          {/* AVAILABILITY */}
 
-          <div>
+          <section className="rounded-xl border border-slate-200 bg-white p-6">
 
-            <h2 className="font-semibold text-slate-950">
+            <h2 className="text-lg font-semibold text-slate-950">
               Availability
             </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Let others know if you're open to collaborating.
-            </p>
+            <select
+              name="availability"
+              value={profile.availability}
+              onChange={handleChange}
+              className="mt-4 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
+            >
+
+              <option value="Available">
+                Available
+              </option>
+
+              <option value="Busy">
+                Busy
+              </option>
+
+              <option value="Looking for team">
+                Looking for team
+              </option>
+
+            </select>
+
+          </section>
+
+
+          {/* SUBMIT */}
+
+          <div className="flex justify-end">
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+
+              {loading
+                ? isEditing
+                  ? "Updating profile..."
+                  : "Creating profile..."
+                : isEditing
+                  ? "Update profile"
+                  : "Create profile"}
+
+            </button>
 
           </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
-
-            {[
-              "Available",
-              "Maybe",
-              "Not available",
-            ].map((option) => {
-
-              const selected =
-                profile.availability ===
-                option;
-
-              return (
-
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() =>
-                    updateProfile(
-                      "availability",
-                      option
-                    )
-                  }
-                  className={
-                    selected
-                      ? "rounded-xl border border-slate-900 bg-slate-900 px-4 py-3 text-sm font-medium text-white"
-                      : "rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 hover:bg-slate-50"
-                  }
-                >
-                  {option}
-                </button>
-
-              );
-
-            })}
-
-          </div>
-
-        </section>
-
-        {/* Submit */}
-
-        <section className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-
-          <p className="text-xs leading-5 text-slate-400">
-            You can update your profile later.
-          </p>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting
-              ? "Creating..."
-              : "Create profile"}
-          </button>
-
-        </section>
+        </form>
 
       </main>
 
+      <Footer />
     </div>
   );
 }

@@ -1,4 +1,7 @@
+import { Link } from "react-router-dom";
+
 import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 function Home() {
   return (
@@ -6,133 +9,151 @@ function Home() {
 
       <Navbar />
 
-      <main className="mx-auto max-w-7xl px-6 py-20">
+      <main>
 
-        {/* Hero */}
-        <section className="max-w-4xl">
+        {/* Hero Section */}
+        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
 
-          <p className="text-sm font-medium tracking-wide text-slate-500">
-            UNIVERSITY TALENT NETWORK
-          </p>
+          <div className="max-w-3xl">
 
-          <h1 className="mt-4 text-5xl font-semibold leading-tight tracking-tight text-slate-950 sm:text-6xl">
-            Find people who can actually build with you.
-          </h1>
+            <p className="mb-4 text-sm font-medium text-slate-500">
+              AI-powered talent discovery
+            </p>
 
-          <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-            Discover students by their skills, projects and interests.
-            Build better teams for projects, hackathons and competitions.
-          </p>
-
-          <div className="mt-10 flex flex-wrap gap-3">
-
-            <a
-              href="/discover"
-              className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
-            >
-              Discover talent
-            </a>
-
-            <a
-              href="/create-profile"
-              className="rounded-lg border border-slate-200 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-            >
-              Create profile
-            </a>
-
-          </div>
-
-        </section>
-
-
-        {/* Search preview */}
-        <section className="mt-16 max-w-3xl">
-
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
-
-            <div className="flex flex-1 items-center gap-3 px-2">
-
-              <span className="text-xl text-slate-400">
-                ⌕
+            <h1 className="text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">
+              Find the right people
+              <span className="block text-slate-500">
+                for the right project.
               </span>
+            </h1>
 
-              <span className="text-sm text-slate-400">
-                What kind of teammate are you looking for?
-              </span>
+            <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+              TalentOS helps universities discover student talent,
+              find relevant teammates and build better project teams
+              using AI-powered semantic search.
+            </p>
+
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+
+              <Link
+                to="/discover"
+                className="rounded-lg bg-slate-900 px-5 py-3 text-center text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Discover talent
+              </Link>
+
+              <Link
+                to="/create-profile"
+                className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-center text-sm font-medium text-slate-700 hover:bg-slate-100"
+              >
+                Create your profile
+              </Link>
 
             </div>
 
-            <a
-              href="/discover"
-              className="rounded-lg bg-slate-900 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-slate-800"
-            >
-              Search
-            </a>
+          </div>
+
+        </section>
+
+        {/* Problem Section */}
+        <section className="border-y border-slate-200 bg-white">
+
+          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+
+            <div className="max-w-2xl">
+
+              <p className="text-sm font-medium text-slate-500">
+                The problem
+              </p>
+
+              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+                Finding teammates shouldn't depend on your friend circle.
+              </h2>
+
+              <p className="mt-4 leading-7 text-slate-600">
+                Students often discover teammates through friends,
+                WhatsApp groups or existing networks. This can make
+                useful skills difficult to discover.
+              </p>
+
+            </div>
 
           </div>
 
         </section>
 
+        {/* How it works */}
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
 
-        {/* Feature cards */}
-        <section className="mt-16 grid gap-5 md:grid-cols-3">
+          <div className="max-w-2xl">
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
-
-            <p className="text-sm font-semibold text-slate-400">
-              01
+            <p className="text-sm font-medium text-slate-500">
+              How TalentOS works
             </p>
 
-            <h2 className="mt-4 font-semibold">
-              Discover talent
+            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+              From student profiles to meaningful matches.
             </h2>
-
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Find students based on skills, projects and what they
-              actually enjoy building.
-            </p>
 
           </div>
 
+          <div className="mt-10 grid gap-6 md:grid-cols-3">
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
 
-            <p className="text-sm font-semibold text-slate-400">
-              02
-            </p>
+              <p className="text-sm font-semibold text-slate-900">
+                01
+              </p>
 
-            <h2 className="mt-4 font-semibold">
-              Build teams
-            </h2>
+              <h3 className="mt-4 text-lg font-semibold text-slate-950">
+                Create a profile
+              </h3>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Bring together people with complementary skills for
-              projects and competitions.
-            </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Add your skills, interests, projects and experience.
+              </p>
 
-          </div>
+            </div>
 
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6">
+              <p className="text-sm font-semibold text-slate-900">
+                02
+              </p>
 
-            <p className="text-sm font-semibold text-slate-400">
-              03
-            </p>
+              <h3 className="mt-4 text-lg font-semibold text-slate-950">
+                Search with AI
+              </h3>
 
-            <h2 className="mt-4 font-semibold">
-              Show your work
-            </h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Describe the type of teammate or skill you need.
+              </p>
 
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              Create a profile that shows what you've actually built,
-              not just a list of technologies.
-            </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-white p-6">
+
+              <p className="text-sm font-semibold text-slate-900">
+                03
+              </p>
+
+              <h3 className="mt-4 text-lg font-semibold text-slate-950">
+                Build your team
+              </h3>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Explore relevant students and create project teams.
+              </p>
+
+            </div>
 
           </div>
 
         </section>
 
       </main>
+
+      <Footer />
 
     </div>
   );
