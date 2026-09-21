@@ -1,8 +1,8 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-
 from sqlalchemy.orm import Session
-
 from qdrant_client.models import PointStruct
 
 from database import engine, Base, get_db
@@ -27,17 +27,30 @@ from qdrant_service import client
 
 
 # ==================================================
-# DATABASE
+# STARTUP
 # ==================================================
 
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
 
+    print("Starting TalentOS backend...")
 
-# ==================================================
-# QDRANT
-# ==================================================
+    try:
+        print("Connecting to database...")
+        Base.metadata.create_all(bind=engine)
+        print("Database ready.")
 
-create_collection()
+        print("Connecting to Qdrant...")
+        create_collection()
+        print("Qdrant ready.")
+
+    except Exception as e:
+        print(f"Startup error: {e}")
+        raise
+
+    yield
+
+    print("TalentOS backend shutting down...")
 
 
 # ==================================================
@@ -48,6 +61,7 @@ app = FastAPI(
     title="TalentOS API",
     description="Backend API for TalentOS",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 
@@ -73,7 +87,6 @@ app.add_middleware(
 
 @app.get("/")
 def home():
-
     return {
         "message": "TalentOS backend is running"
     }
@@ -96,7 +109,6 @@ def create_profile(
     )
 
     if existing_profile:
-
         raise HTTPException(
             status_code=400,
             detail="A profile with this email already exists.",
@@ -115,11 +127,9 @@ def create_profile(
     )
 
     db.add(new_profile)
-
     db.flush()
 
     for project in profile.projects:
-
         new_project = Project(
             profile_id=new_profile.id,
             name=project.name,
@@ -130,28 +140,13 @@ def create_profile(
         db.add(new_project)
 
     db.commit()
-
     db.refresh(new_profile)
 
-
-    # ==============================================
-    # CREATE PROFILE EMBEDDING
-    # ==============================================
-
-    profile_text, embedding = create_profile_embedding(
-        profile
-    )
-
-
-    # ==============================================
-    # STORE PROFILE IN QDRANT
-    # ==============================================
+    profile_text, embedding = create_profile_embedding(profile)
 
     qdrant_point = PointStruct(
         id=new_profile.id,
-
         vector=embedding,
-
         payload={
             "profile_id": new_profile.id,
             "name": new_profile.name,
@@ -171,13 +166,9 @@ def create_profile(
         points=[qdrant_point],
     )
 
-
     return {
-
         "message": "Profile created successfully",
-
         "profile": {
-
             "id": new_profile.id,
             "name": new_profile.name,
             "email": new_profile.email,
@@ -187,18 +178,14 @@ def create_profile(
             "skills": profile.skills,
             "interests": profile.interests,
             "availability": profile.availability,
-
             "projects": [
-
                 {
                     "id": project.id,
                     "name": project.name,
                     "description": project.description,
                     "technologies": project.technologies,
                 }
-
                 for project in new_profile.projects
-
             ],
         },
     }
@@ -210,6 +197,7 @@ def create_profile(
 
 @app.get("/profiles")
 def get_profiles(db: Session = Depends(get_db)):
+
     profiles = db.query(Profile).all()
 
     return [
@@ -230,7 +218,7 @@ def get_profiles(db: Session = Depends(get_db)):
     ]
 
 
- # ==================================================
+# ==================================================
 # UPDATE PROFILE
 # ==================================================
 
@@ -248,13 +236,10 @@ def update_profile(
     )
 
     if not existing_profile:
-
         raise HTTPException(
             status_code=404,
             detail="Student profile not found.",
         )
-
-    # Check if another profile already uses this email
 
     duplicate_email = (
         db.query(Profile)
@@ -266,15 +251,10 @@ def update_profile(
     )
 
     if duplicate_email:
-
         raise HTTPException(
             status_code=400,
             detail="Another profile with this email already exists.",
         )
-
-    # ==============================================
-    # UPDATE BASIC INFORMATION
-    # ==============================================
 
     existing_profile.name = profile.name
     existing_profile.email = profile.email
@@ -286,21 +266,12 @@ def update_profile(
     existing_profile.interests = ", ".join(profile.interests)
     existing_profile.availability = profile.availability
 
-    # ==============================================
-    # DELETE OLD PROJECTS
-    # ==============================================
-
     for project in list(existing_profile.projects):
         db.delete(project)
 
     db.flush()
 
-    # ==============================================
-    # CREATE UPDATED PROJECTS
-    # ==============================================
-
     for project in profile.projects:
-
         new_project = Project(
             profile_id=existing_profile.id,
             name=project.name,
@@ -311,26 +282,13 @@ def update_profile(
         db.add(new_project)
 
     db.commit()
-
     db.refresh(existing_profile)
 
-    # ==============================================
-    # CREATE UPDATED EMBEDDING
-    # ==============================================
-
-    profile_text, embedding = create_profile_embedding(
-        profile
-    )
-
-    # ==============================================
-    # UPDATE QDRANT
-    # ==============================================
+    profile_text, embedding = create_profile_embedding(profile)
 
     qdrant_point = PointStruct(
         id=existing_profile.id,
-
         vector=embedding,
-
         payload={
             "profile_id": existing_profile.id,
             "name": existing_profile.name,
@@ -350,13 +308,8 @@ def update_profile(
         points=[qdrant_point],
     )
 
-    # ==============================================
-    # RESPONSE
-    # ==============================================
-
     return {
         "message": "Profile updated successfully",
-
         "profile": {
             "id": existing_profile.id,
             "name": existing_profile.name,
@@ -368,7 +321,6 @@ def update_profile(
             "skills": profile.skills,
             "interests": profile.interests,
             "availability": profile.availability,
-
             "projects": [
                 {
                     "id": project.id,
@@ -376,11 +328,11 @@ def update_profile(
                     "description": project.description,
                     "technologies": project.technologies,
                 }
-
                 for project in existing_profile.projects
             ],
         },
     }
+
 
 # ==================================================
 # CREATE TEAM
@@ -398,22 +350,16 @@ def create_team(
     )
 
     db.add(new_team)
-
     db.commit()
-
     db.refresh(new_team)
 
     return {
-
         "message": "Team created successfully",
-
         "team": {
-
             "id": new_team.id,
             "name": new_team.name,
             "project": new_team.project,
             "members": [],
-
         },
     }
 
@@ -436,7 +382,6 @@ def get_teams(
         members = []
 
         for member in team.members:
-
             members.append(
                 {
                     "id": member.id,
@@ -477,12 +422,10 @@ def add_team_member(
     )
 
     if not team:
-
         raise HTTPException(
             status_code=404,
             detail="Team not found.",
         )
-
 
     profile = (
         db.query(Profile)
@@ -491,12 +434,10 @@ def add_team_member(
     )
 
     if not profile:
-
         raise HTTPException(
             status_code=404,
             detail="Student profile not found.",
         )
-
 
     existing_member = (
         db.query(TeamMember)
@@ -508,12 +449,10 @@ def add_team_member(
     )
 
     if existing_member:
-
         raise HTTPException(
             status_code=400,
             detail="Student is already a member of this team.",
         )
-
 
     new_member = TeamMember(
         team_id=team_id,
@@ -522,25 +461,18 @@ def add_team_member(
     )
 
     db.add(new_member)
-
     db.commit()
-
     db.refresh(new_member)
 
-
     return {
-
         "message": "Student added to team successfully",
-
         "member": {
-
             "id": new_member.id,
             "team_id": new_member.team_id,
             "profile_id": new_member.profile_id,
             "name": profile.name,
             "degree": profile.degree,
             "role": new_member.role,
-
         },
     }
 
@@ -549,11 +481,46 @@ def add_team_member(
 # DELETE TEAM MEMBER
 # ==================================================
 
+@app.delete("/teams/{team_id}/members/{member_id}")
+def delete_team_member(
+    team_id: int,
+    member_id: int,
+    db: Session = Depends(get_db)
+):
+
+    member = (
+        db.query(TeamMember)
+        .filter(
+            TeamMember.id == member_id,
+            TeamMember.team_id == team_id,
+        )
+        .first()
+    )
+
+    if not member:
+        raise HTTPException(
+            status_code=404,
+            detail="Team member not found.",
+        )
+
+    db.delete(member)
+    db.commit()
+
+    return {
+        "message": "Team member removed successfully"
+    }
+
+
+# ==================================================
+# DELETE TEAM
+# ==================================================
+
 @app.delete("/teams/{team_id}")
 def delete_team(
     team_id: int,
     db: Session = Depends(get_db)
 ):
+
     team = (
         db.query(Team)
         .filter(Team.id == team_id)
@@ -566,18 +533,17 @@ def delete_team(
             detail="Team not found."
         )
 
-    # Remove all team members first
     db.query(TeamMember).filter(
         TeamMember.team_id == team_id
     ).delete(synchronize_session=False)
 
-    # Remove the team
     db.delete(team)
     db.commit()
 
     return {
         "message": "Team deleted successfully"
     }
+
 
 # ==================================================
 # AI SEMANTIC SEARCH
@@ -589,17 +555,14 @@ def search_profiles(
 ):
 
     if not search_request.query.strip():
-
         raise HTTPException(
             status_code=400,
             detail="Search query cannot be empty.",
         )
 
-
     query_embedding = create_embedding(
         search_request.query
     )
-
 
     results = client.query_points(
         collection_name=COLLECTION_NAME,
@@ -608,68 +571,29 @@ def search_profiles(
         with_payload=True,
     )
 
-
     matches = []
-
 
     for result in results.points:
 
         payload = result.payload
 
-
         matches.append(
             {
-                "profile_id": payload.get(
-                    "profile_id"
-                ),
-
-                "name": payload.get(
-                    "name"
-                ),
-
-                "email": payload.get(
-                    "email"
-                ),
-
-                "phone": payload.get(
-                    "phone"
-                ),
-
-                "degree": payload.get(
-                    "degree"
-                ),
-
-                "year": payload.get(
-                    "year"
-                ),
-
-                "skills": payload.get(
-                    "skills",
-                    []
-                ),
-
-                "interests": payload.get(
-                    "interests",
-                    []
-                ),
-
-                "availability": payload.get(
-                    "availability"
-                ),
-
-                "profile": payload.get(
-                    "profile"
-                ),
-
+                "profile_id": payload.get("profile_id"),
+                "name": payload.get("name"),
+                "email": payload.get("email"),
+                "phone": payload.get("phone"),
+                "degree": payload.get("degree"),
+                "year": payload.get("year"),
+                "skills": payload.get("skills", []),
+                "interests": payload.get("interests", []),
+                "availability": payload.get("availability"),
+                "profile": payload.get("profile"),
                 "score": result.score,
             }
         )
 
-
     return {
-
         "query": search_request.query,
-
         "results": matches,
-
     }
