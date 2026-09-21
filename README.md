@@ -2,9 +2,9 @@
 
 > AI-powered talent discovery and team formation platform for universities.
 
-🔗 **[Live Demo](https://talentos-est41pac0-shafiqurrahman.vercel.app/)**
+🔗 **[Live Demo](https://talentos-sooty.vercel.app)**
 
-TalentOS helps university students discover suitable teammates based on their skills, interests, projects, academic background, and availability. Using semantic search and AI-powered matching, students can find the right teammates for their projects.
+TalentOS helps university students discover suitable teammates based on their skills, interests, projects, academic background, and availability. Using semantic search and AI-powered matching, students can find teammates for academic projects, hackathons, and collaborative work.
 
 ---
 
