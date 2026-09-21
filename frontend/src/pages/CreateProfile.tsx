@@ -75,7 +75,7 @@ function CreateProfile() {
     const fetchProfile = async () => {
       try {
         const response = await axios.get(
-          "http://127.0.0.1:8000/profiles"
+          "https://talentos-c2kd.onrender.com/profiles"
         );
 
         const profiles = response.data;
@@ -300,14 +300,14 @@ function CreateProfile() {
 
       if (isEditing && profileId) {
         response = await axios.put(
-          `http://127.0.0.1:8000/profiles/${profileId}`,
+          `https://talentos-c2kd.onrender.com/profiles/${profileId}`,
           profile
         );
 
         alert("Profile updated successfully!");
       } else {
         response = await axios.post(
-          "http://127.0.0.1:8000/profiles",
+          "https://talentos-c2kd.onrender.com/profiles",
           profile
         );
 

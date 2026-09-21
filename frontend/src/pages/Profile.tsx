@@ -46,7 +46,7 @@ function Profile() {
         }
 
         const response = await axios.get(
-          "http://127.0.0.1:8000/profiles"
+          "https://talentos-c2kd.onrender.com/profiles"
         );
 
         const profiles: ProfileData[] = response.data;

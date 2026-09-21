@@ -1,0 +1,1 @@
+export const API_URL = "https://talentos-c2kd.onrender.com";

@@ -36,7 +36,7 @@ function Discover() {
       setSearched(true);
 
       const response = await axios.post(
-        "http://127.0.0.1:8000/search",
+        "https://talentos-c2kd.onrender.com/search",
         {
           query: query,
           limit: 5,

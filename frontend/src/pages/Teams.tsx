@@ -35,7 +35,7 @@ function Teams() {
       setLoading(true);
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/teams"
+        "https://talentos-c2kd.onrender.com/teams"
       );
 
       setTeams(response.data);
@@ -66,7 +66,7 @@ function Teams() {
       setCreatingTeam(true);
 
       await axios.post(
-        "http://127.0.0.1:8000/teams",
+        "https://talentos-c2kd.onrender.com/teams",
         {
           name: teamName.trim(),
           project: teamProject.trim(),
@@ -103,7 +103,7 @@ function Teams() {
       setRemovingMemberId(memberId);
 
       await axios.delete(
-        `http://127.0.0.1:8000/teams/${teamId}/members/${memberId}`
+        `https://talentos-c2kd.onrender.com/teams/${teamId}/members/${memberId}`
       );
 
       await fetchTeams();
@@ -131,7 +131,7 @@ function Teams() {
       setRemovingTeamId(teamId);
 
       await axios.delete(
-        `http://127.0.0.1:8000/teams/${teamId}`
+        `https://talentos-c2kd.onrender.com/teams/${teamId}`
       );
 
       await fetchTeams();

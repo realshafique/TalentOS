@@ -85,7 +85,7 @@ function StudentProfile() {
         setLoading(true);
 
         const response = await axios.get(
-          "http://127.0.0.1:8000/profiles"
+          "https://talentos-c2kd.onrender.com/profiles"
         );
 
         const profiles: Student[] =
@@ -140,7 +140,7 @@ function StudentProfile() {
       setLoadingTeams(true);
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/teams"
+        "https://talentos-c2kd.onrender.com/teams"
       );
 
       setTeams(response.data);
@@ -208,7 +208,7 @@ function StudentProfile() {
       setAddingMember(true);
 
       const response = await axios.post(
-        `http://127.0.0.1:8000/teams/${selectedTeamId}/members`,
+        `https://talentos-c2kd.onrender.com/teams/${selectedTeamId}/members`,
         {
           profile_id: student.id,
           role: role.trim(),
