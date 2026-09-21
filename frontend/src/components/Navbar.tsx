@@ -6,11 +6,19 @@ function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
 
         <Link
-          to="/"
-          className="text-lg font-semibold tracking-tight text-slate-950"
-        >
-          TalentOS
-        </Link>
+  to="/"
+  className="group flex items-center gap-1.5"
+>
+  <span className="text-xl font-bold tracking-tight text-slate-950">
+    Talent
+  </span>
+
+  <span className="text-xl font-bold tracking-tight text-indigo-600 transition-colors group-hover:text-indigo-700">
+    OS
+  </span>
+
+  <span className="ml-0.5 mt-0.5 h-1.5 w-1.5 rounded-full bg-indigo-600" />
+</Link>
 
         <nav className="flex items-center gap-4 sm:gap-6">
 
