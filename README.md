@@ -51,7 +51,7 @@ TalentOS provides an AI-powered platform where students can create profiles cont
 
 Users can then search for students using natural-language queries.
 
-```text
+text
 For example:
 
 I need someone experienced in Python and machine learning for an AI project.
