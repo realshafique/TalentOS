@@ -45,6 +45,9 @@ def create_profile_embedding(profile):
 
     profile_text = build_profile_text(profile)
 
-    embedding = create_embedding(profile_text)
+    embedding = create_embedding(
+        profile_text,
+        task="retrieval.passage"
+    )
 
     return profile_text, embedding

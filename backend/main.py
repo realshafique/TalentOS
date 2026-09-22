@@ -561,8 +561,9 @@ def search_profiles(
         )
 
     query_embedding = create_embedding(
-        search_request.query
-    )
+    search_request.query,
+    task="retrieval.query"
+)
 
     results = client.query_points(
         collection_name=COLLECTION_NAME,

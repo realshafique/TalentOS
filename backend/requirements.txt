@@ -2,7 +2,10 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 psycopg2-binary
-qdrant-client
-sentence-transformers
-python-dotenv
 pydantic
+fastapi
+uvicorn
+psycopg2-binary
+qdrant-client
+python-dotenv
+requests
