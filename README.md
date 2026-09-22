@@ -4,7 +4,7 @@
 
 🔗 **[Live Demo](https://talentos-sooty.vercel.app)**
 
-TalentOS helps university students discover suitable teammates based on their skills, interests, projects, academic background, and availability. Using semantic search and AI-powered matching, students can find teammates for academic projects, hackathons, and collaborative work.
+TalentOS helps university students discover suitable teammates based on their skills, interests, projects, academic background, and availability. Using semantic search and AI-powered matching, students can find collaborators who are a strong fit for their projects.
 
 ---
 
@@ -71,22 +71,18 @@ Unlike traditional keyword-based search, TalentOS uses vector embeddings to unde
 ```text
 User Query
     ↓
-Sentence Transformer Model
+Jina AI Embedding Model
     ↓
-384-Dimensional Vector Embedding
+Vector Embedding
     ↓
 Qdrant Similarity Search
     ↓
 Ranked Student Profiles
 ```
 
-The project currently uses:
+TalentOS uses a Jina AI embedding model to generate semantic vectors for both search queries and student profiles. These embeddings are stored and searched using Qdrant, enabling relevant results even when a query does not use the exact keywords found in a profile.
 
-```text
-sentence-transformers/all-MiniLM-L6-v2
-```
-
-This model generates 384-dimensional embeddings that are stored and searched using Qdrant.
+The embedding model is loaded and used by the FastAPI backend. Keep the model configuration and embedding dimensionality consistent with the Qdrant collection configuration when changing models or rebuilding the index.
 
 ---
 
@@ -99,11 +95,13 @@ HTTP / JSON API
       ↓
 FastAPI Backend
       ↓
-PostgreSQL Database
+Jina AI Embeddings
       ↓
 Qdrant Vector Database
       ↓
-Sentence Transformers
+Ranked Student Profiles
+
+FastAPI Backend ──→ PostgreSQL Database
 ```
 
 ### Main Components
@@ -116,7 +114,7 @@ Sentence Transformers
 | FastAPI | Backend API framework |
 | PostgreSQL | Persistent structured data storage |
 | Qdrant | Vector database for semantic search |
-| Sentence Transformers | Text embedding generation |
+| Jina AI | Text embedding generation for semantic search |
 
 ---
 
@@ -136,13 +134,14 @@ TalentOS/
 
 ### Prerequisites
 
-Make sure you have the following installed:
+Make sure you have the following installed or available:
 
 - Node.js
 - npm
 - Python 3.10+
 - PostgreSQL
 - Qdrant
+- Jina AI access and credentials, if required by your embedding configuration
 
 ### Clone the Repository
 
@@ -229,14 +228,17 @@ http://127.0.0.1:8000/docs
 
 ## 🔐 Environment Variables
 
-Create a `.env` file in the backend directory and configure your database and vector database connections.
+Create a `.env` file in the backend directory and configure your database, vector database, and Jina AI embedding settings.
 
 Example:
 
 ```env
 DATABASE_URL=postgresql://username:password@localhost:5432/talentos
 QDRANT_URL=http://localhost:6333
+JINA_API_KEY=your-jina-api-key
 ```
+
+Use the variable names expected by the backend embedding implementation. If the application uses a hosted Jina AI endpoint, `JINA_API_KEY` must be available to the backend at runtime.
 
 Never commit passwords, API keys, or other sensitive credentials to the repository.
 
@@ -254,7 +256,7 @@ TalentOS uses PostgreSQL to store structured application data, including:
 - Team members
 - Assigned roles
 
-Qdrant stores vector embeddings used for semantic student search.
+Qdrant stores the Jina AI vector embeddings used for semantic student search.
 
 ---
 
