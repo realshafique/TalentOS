@@ -552,35 +552,27 @@ def delete_team(
 
 @app.post("/search")
 def search_profiles(search_request: SearchRequest):
-    try:
-        query_embedding = create_embedding(
-            search_request.query,
-            task="retrieval.query"
-        )
+    query_embedding = create_embedding(
+        search_request.query,
+        task="retrieval.query"
+    )
 
-        results = client.query_points(
-            collection_name=COLLECTION_NAME,
-            query=query_embedding,
-            limit=search_request.limit,
-            with_payload=True,
-        )
+    results = client.query_points(
+        collection_name=COLLECTION_NAME,
+        query=query_embedding,
+        limit=search_request.limit,
+        with_payload=True,
+    )
 
-        return {
-            "query": search_request.query,
-            "results": [
-                {
-                    "profile_id": point.payload.get("profile_id"),
-                    "name": point.payload.get("name"),
-                    "skills": point.payload.get("skills"),
-                    "score": point.score,
-                }
-                for point in results.points
-            ],
-        }
-
-    except Exception as e:
-        print("SEARCH ERROR:", repr(e))
-        raise HTTPException(
-            status_code=500,
-            detail=f"Search failed: {str(e)}"
-        )
+    return {
+        "query": search_request.query,
+        "results": [
+            {
+                "profile_id": point.payload.get("profile_id"),
+                "name": point.payload.get("name"),
+                "skills": point.payload.get("skills"),
+                "score": point.score,
+            }
+            for point in results.points
+        ],
+    }
