@@ -1,3 +1,4 @@
+import API_URL from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -75,7 +76,7 @@ function CreateProfile() {
     const fetchProfile = async () => {
       try {
         const response = await axios.get(
-          "https://talentos-c2kd.onrender.com/profiles"
+          `${API_URL}/profiles`
         );
 
         const profiles = response.data;
@@ -94,18 +95,25 @@ function CreateProfile() {
             degree: existingProfile.degree || "",
             year: existingProfile.year || "",
             about: existingProfile.about || "",
-            skills: existingProfile.skills
+
+            skills: Array.isArray(existingProfile.skills)
               ? existingProfile.skills
-                  .split(",")
-                  .map((skill: string) => skill.trim())
-                  .filter(Boolean)
-              : [],
-            interests: existingProfile.interests
+              : existingProfile.skills
+                ? existingProfile.skills
+                    .split(",")
+                    .map((skill: string) => skill.trim())
+                    .filter(Boolean)
+                : [],
+
+            interests: Array.isArray(existingProfile.interests)
               ? existingProfile.interests
-                  .split(",")
-                  .map((interest: string) => interest.trim())
-                  .filter(Boolean)
-              : [],
+              : existingProfile.interests
+                ? existingProfile.interests
+                    .split(",")
+                    .map((interest: string) => interest.trim())
+                    .filter(Boolean)
+                : [],
+
             projects:
               existingProfile.projects &&
               existingProfile.projects.length > 0
@@ -118,6 +126,7 @@ function CreateProfile() {
                       technologies: "",
                     },
                   ],
+
             availability:
               existingProfile.availability || "Available",
           });
@@ -125,7 +134,7 @@ function CreateProfile() {
           setIsEditing(true);
         }
       } catch (error) {
-        console.error(error);
+        console.error("Failed to load profile:", error);
       } finally {
         setLoadingProfile(false);
       }
@@ -300,14 +309,14 @@ function CreateProfile() {
 
       if (isEditing && profileId) {
         response = await axios.put(
-          `https://talentos-c2kd.onrender.com/profiles/${profileId}`,
+          `${API_URL}/profiles/${profileId}`,
           profile
         );
 
         alert("Profile updated successfully!");
       } else {
         response = await axios.post(
-          "https://talentos-c2kd.onrender.com/profiles",
+          `${API_URL}/profiles`,
           profile
         );
 
@@ -326,11 +335,25 @@ function CreateProfile() {
 
       console.log(response.data);
     } catch (error) {
-      console.error(error);
+      console.error("Profile request failed:", error);
 
       if (axios.isAxiosError(error)) {
-        if (error.response?.data?.detail) {
-          alert(error.response.data.detail);
+        const detail = error.response?.data?.detail;
+
+        if (Array.isArray(detail)) {
+          const messages = detail
+            .map((item: any) => {
+              const field = Array.isArray(item.loc)
+                ? item.loc.join(".")
+                : "field";
+
+              return `${field}: ${item.msg}`;
+            })
+            .join("\n");
+
+          alert(messages);
+        } else if (detail) {
+          alert(detail);
         } else {
           alert(
             isEditing
@@ -369,14 +392,15 @@ function CreateProfile() {
       <Navbar />
 
       <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-
         <div className="max-w-2xl">
           <p className="text-sm font-medium text-slate-500">
             TalentOS
           </p>
 
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-            {isEditing ? "Update your profile" : "Create your profile"}
+            {isEditing
+              ? "Update your profile"
+              : "Create your profile"}
           </h1>
 
           <p className="mt-4 leading-7 text-slate-600">
@@ -389,17 +413,14 @@ function CreateProfile() {
           onSubmit={handleSubmit}
           className="mt-8 space-y-6"
         >
-
           {/* BASIC INFORMATION */}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6">
-
             <h2 className="text-lg font-semibold text-slate-950">
               Basic information
             </h2>
 
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
-
               <div>
                 <label
                   htmlFor="name"
@@ -453,42 +474,24 @@ function CreateProfile() {
                   onChange={handleChange}
                   className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
                 >
-                  <option value="">
-                    Select year
-                  </option>
-
-                  <option value="1st Year">
-                    1st Year
-                  </option>
-
-                  <option value="2nd Year">
-                    2nd Year
-                  </option>
-
-                  <option value="3rd Year">
-                    3rd Year
-                  </option>
-
-                  <option value="4th Year">
-                    4th Year
-                  </option>
+                  <option value="">Select year</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year">3rd Year</option>
+                  <option value="4th Year">4th Year</option>
                 </select>
               </div>
-
             </div>
           </section>
-
 
           {/* CONTACT INFORMATION */}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6">
-
             <h2 className="text-lg font-semibold text-slate-950">
               Contact information
             </h2>
 
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
-
               <div>
                 <label
                   htmlFor="email"
@@ -526,15 +529,12 @@ function CreateProfile() {
                   className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                 />
               </div>
-
             </div>
           </section>
-
 
           {/* ABOUT */}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6">
-
             <h2 className="text-lg font-semibold text-slate-950">
               About you
             </h2>
@@ -547,20 +547,16 @@ function CreateProfile() {
               placeholder="Tell us about yourself, your experience and what you like building..."
               className="mt-4 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
             />
-
           </section>
-
 
           {/* SKILLS */}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6">
-
             <h2 className="text-lg font-semibold text-slate-950">
               Skills
             </h2>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-
               <input
                 type="text"
                 value={skillInput}
@@ -584,12 +580,10 @@ function CreateProfile() {
               >
                 Add skill
               </button>
-
             </div>
 
             {profile.skills.length > 0 && (
               <div className="mt-5 flex flex-wrap gap-2">
-
                 {profile.skills.map((skill) => (
                   <span
                     key={skill}
@@ -606,23 +600,18 @@ function CreateProfile() {
                     </button>
                   </span>
                 ))}
-
               </div>
             )}
-
           </section>
-
 
           {/* INTERESTS */}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6">
-
             <h2 className="text-lg font-semibold text-slate-950">
               Interests
             </h2>
 
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-
               <input
                 type="text"
                 value={interestInput}
@@ -646,12 +635,10 @@ function CreateProfile() {
               >
                 Add interest
               </button>
-
             </div>
 
             {profile.interests.length > 0 && (
               <div className="mt-5 flex flex-wrap gap-2">
-
                 {profile.interests.map((interest) => (
                   <span
                     key={interest}
@@ -661,26 +648,23 @@ function CreateProfile() {
 
                     <button
                       type="button"
-                      onClick={() => removeInterest(interest)}
+                      onClick={() =>
+                        removeInterest(interest)
+                      }
                       className="font-medium text-slate-400 hover:text-red-500"
                     >
                       ×
                     </button>
                   </span>
                 ))}
-
               </div>
             )}
-
           </section>
-
 
           {/* PROJECTS */}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6">
-
             <div className="flex items-center justify-between">
-
               <div>
                 <h2 className="text-lg font-semibold text-slate-950">
                   Projects
@@ -698,20 +682,15 @@ function CreateProfile() {
               >
                 Add project
               </button>
-
             </div>
 
             <div className="mt-6 space-y-5">
-
               {profile.projects.map((project, index) => (
-
                 <div
                   key={project.id}
                   className="rounded-lg border border-slate-200 p-5"
                 >
-
                   <div className="flex items-center justify-between">
-
                     <h3 className="font-medium text-slate-900">
                       Project {index + 1}
                     </h3>
@@ -727,13 +706,10 @@ function CreateProfile() {
                         Remove
                       </button>
                     )}
-
                   </div>
 
                   <div className="mt-4 space-y-4">
-
                     <div>
-
                       <label className="text-sm font-medium text-slate-900">
                         Project name
                       </label>
@@ -751,11 +727,9 @@ function CreateProfile() {
                         placeholder="AI Resume Analyzer"
                         className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
-
                     </div>
 
                     <div>
-
                       <label className="text-sm font-medium text-slate-900">
                         Description
                       </label>
@@ -773,11 +747,9 @@ function CreateProfile() {
                         placeholder="Describe what you built..."
                         className="mt-2 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
-
                     </div>
 
                     <div>
-
                       <label className="text-sm font-medium text-slate-900">
                         Technologies
                       </label>
@@ -795,24 +767,16 @@ function CreateProfile() {
                         placeholder="Python, FastAPI, React"
                         className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
-
                     </div>
-
                   </div>
-
                 </div>
-
               ))}
-
             </div>
-
           </section>
-
 
           {/* AVAILABILITY */}
 
           <section className="rounded-xl border border-slate-200 bg-white p-6">
-
             <h2 className="text-lg font-semibold text-slate-950">
               Availability
             </h2>
@@ -823,34 +787,22 @@ function CreateProfile() {
               onChange={handleChange}
               className="mt-4 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
             >
-
-              <option value="Available">
-                Available
-              </option>
-
-              <option value="Busy">
-                Busy
-              </option>
-
+              <option value="Available">Available</option>
+              <option value="Busy">Busy</option>
               <option value="Looking for team">
                 Looking for team
               </option>
-
             </select>
-
           </section>
-
 
           {/* SUBMIT */}
 
           <div className="flex justify-end">
-
             <button
               type="submit"
               disabled={loading}
               className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-
               {loading
                 ? isEditing
                   ? "Updating profile..."
@@ -858,13 +810,9 @@ function CreateProfile() {
                 : isEditing
                   ? "Update profile"
                   : "Create profile"}
-
             </button>
-
           </div>
-
         </form>
-
       </main>
 
       <Footer />

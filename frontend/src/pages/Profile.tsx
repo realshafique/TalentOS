@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
+import API_URL from "../config";
+
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
@@ -28,9 +30,7 @@ type ProfileData = {
 
 function Profile() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -45,15 +45,12 @@ function Profile() {
           return;
         }
 
-        const response = await axios.get(
-          "https://talentos-c2kd.onrender.com/profiles"
-        );
+        const response = await axios.get(`${API_URL}/profiles`);
 
         const profiles: ProfileData[] = response.data;
 
         const foundProfile = profiles.find(
-          (item) =>
-            item.id === Number(savedProfileId)
+          (item) => item.id === Number(savedProfileId)
         );
 
         if (!foundProfile) {
@@ -62,13 +59,22 @@ function Profile() {
         }
 
         setProfile(foundProfile);
-
       } catch (error) {
-        console.error(error);
+        console.error("Failed to load profile:", error);
 
-        setError(
-          "Unable to load your profile."
-        );
+        if (axios.isAxiosError(error)) {
+          console.error(
+            "Status:",
+            error.response?.status
+          );
+
+          console.error(
+            "Response:",
+            error.response?.data
+          );
+        }
+
+        setError("Unable to load your profile.");
       } finally {
         setLoading(false);
       }
@@ -94,23 +100,17 @@ function Profile() {
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50">
-
         <Navbar />
 
         <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-
           <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-
             <p className="text-sm text-slate-500">
               Loading your profile...
             </p>
-
           </div>
-
         </main>
 
         <Footer />
-
       </div>
     );
   }
@@ -118,13 +118,10 @@ function Profile() {
   if (!profile) {
     return (
       <div className="min-h-screen bg-slate-50">
-
         <Navbar />
 
         <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-
           <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-
             <h1 className="text-xl font-semibold text-slate-950">
               No profile found
             </h1>
@@ -140,30 +137,23 @@ function Profile() {
             >
               Create profile
             </Link>
-
           </div>
-
         </main>
 
         <Footer />
-
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-slate-50">
-
       <Navbar />
 
       <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-
         {/* HEADER */}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-
           <div>
-
             <p className="text-sm font-medium text-slate-500">
               Student profile
             </p>
@@ -171,7 +161,6 @@ function Profile() {
             <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
               My Profile
             </h1>
-
           </div>
 
           <Link
@@ -180,20 +169,16 @@ function Profile() {
           >
             Edit profile
           </Link>
-
         </div>
-
 
         {/* BASIC INFORMATION */}
 
         <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
-
           <h2 className="text-lg font-semibold text-slate-950">
             Basic information
           </h2>
 
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
-
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Name
@@ -233,24 +218,18 @@ function Profile() {
                 {profile.availability}
               </p>
             </div>
-
           </div>
-
         </section>
-
 
         {/* CONTACT */}
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-
           <h2 className="text-lg font-semibold text-slate-950">
             Contact information
           </h2>
 
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
-
             <div>
-
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Email
               </p>
@@ -258,11 +237,9 @@ function Profile() {
               <p className="mt-1 text-sm text-slate-700">
                 {profile.email}
               </p>
-
             </div>
 
             <div>
-
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Phone
               </p>
@@ -270,18 +247,13 @@ function Profile() {
               <p className="mt-1 text-sm text-slate-700">
                 {profile.phone || "Not provided"}
               </p>
-
             </div>
-
           </div>
-
         </section>
-
 
         {/* ABOUT */}
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-
           <h2 className="text-lg font-semibold text-slate-950">
             About
           </h2>
@@ -289,101 +261,72 @@ function Profile() {
           <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">
             {profile.about || "No description provided."}
           </p>
-
         </section>
-
 
         {/* SKILLS */}
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-
           <h2 className="text-lg font-semibold text-slate-950">
             Skills
           </h2>
 
           {skills.length > 0 ? (
-
             <div className="mt-4 flex flex-wrap gap-2">
-
               {skills.map((skill) => (
-
                 <span
                   key={skill}
                   className="rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-700"
                 >
                   {skill}
                 </span>
-
               ))}
-
             </div>
-
           ) : (
-
             <p className="mt-4 text-sm text-slate-500">
               No skills listed.
             </p>
-
           )}
-
         </section>
-
 
         {/* INTERESTS */}
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-
           <h2 className="text-lg font-semibold text-slate-950">
             Interests
           </h2>
 
           {interests.length > 0 ? (
-
             <div className="mt-4 flex flex-wrap gap-2">
-
               {interests.map((interest) => (
-
                 <span
                   key={interest}
                   className="rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-700"
                 >
                   {interest}
                 </span>
-
               ))}
-
             </div>
-
           ) : (
-
             <p className="mt-4 text-sm text-slate-500">
               No interests listed.
             </p>
-
           )}
-
         </section>
-
 
         {/* PROJECTS */}
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-
           <h2 className="text-lg font-semibold text-slate-950">
             Projects
           </h2>
 
           {profile.projects.length > 0 ? (
-
             <div className="mt-5 space-y-4">
-
               {profile.projects.map((project) => (
-
                 <div
                   key={project.id}
                   className="rounded-lg border border-slate-200 p-5"
                 >
-
                   <h3 className="font-semibold text-slate-950">
                     {project.name}
                   </h3>
@@ -393,35 +336,23 @@ function Profile() {
                   </p>
 
                   <p className="mt-4 text-xs text-slate-500">
-
                     <span className="font-medium text-slate-700">
                       Technologies:
                     </span>{" "}
-
                     {project.technologies}
-
                   </p>
-
                 </div>
-
               ))}
-
             </div>
-
           ) : (
-
             <p className="mt-4 text-sm text-slate-500">
               No projects listed.
             </p>
-
           )}
-
         </section>
-
       </main>
 
       <Footer />
-
     </div>
   );
 }
