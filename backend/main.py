@@ -551,51 +551,36 @@ def delete_team(
 # ==================================================
 
 @app.post("/search")
-def search_profiles(
-    search_request: SearchRequest
-):
+def search_profiles(search_request: SearchRequest):
+    try:
+        query_embedding = create_embedding(
+            search_request.query,
+            task="retrieval.query"
+        )
 
-    if not search_request.query.strip():
+        results = client.query_points(
+            collection_name=COLLECTION_NAME,
+            query=query_embedding,
+            limit=search_request.limit,
+            with_payload=True,
+        )
+
+        return {
+            "query": search_request.query,
+            "results": [
+                {
+                    "profile_id": point.payload.get("profile_id"),
+                    "name": point.payload.get("name"),
+                    "skills": point.payload.get("skills"),
+                    "score": point.score,
+                }
+                for point in results.points
+            ],
+        }
+
+    except Exception as e:
+        print("SEARCH ERROR:", repr(e))
         raise HTTPException(
-            status_code=400,
-            detail="Search query cannot be empty.",
+            status_code=500,
+            detail=f"Search failed: {str(e)}"
         )
-
-    query_embedding = create_embedding(
-    search_request.query,
-    task="retrieval.query"
-)
-
-    results = client.query_points(
-        collection_name=COLLECTION_NAME,
-        query=query_embedding,
-        limit=search_request.limit,
-        with_payload=True,
-    )
-
-    matches = []
-
-    for result in results.points:
-
-        payload = result.payload
-
-        matches.append(
-            {
-                "profile_id": payload.get("profile_id"),
-                "name": payload.get("name"),
-                "email": payload.get("email"),
-                "phone": payload.get("phone"),
-                "degree": payload.get("degree"),
-                "year": payload.get("year"),
-                "skills": payload.get("skills", []),
-                "interests": payload.get("interests", []),
-                "availability": payload.get("availability"),
-                "profile": payload.get("profile"),
-                "score": result.score,
-            }
-        )
-
-    return {
-        "query": search_request.query,
-        "results": matches,
-    }
