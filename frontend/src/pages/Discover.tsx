@@ -10,14 +10,14 @@ import Footer from "../components/Footer";
 type Student = {
   profile_id: number;
   name: string;
-  email: string;
-  phone: string | null;
-  degree: string;
-  year: string;
+  email?: string;
+  phone?: string | null;
+  degree?: string;
+  year?: string;
   skills: string[] | string;
   interests: string[] | string;
-  availability: string;
-  profile: string;
+  availability?: string;
+  profile?: string;
   score: number;
 };
 
@@ -185,183 +185,159 @@ function Discover() {
 
         {!loading && students.length > 0 && (
           <section className="mt-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-950">
-                  Matching students
-                </h2>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-950">
+                Matching students
+              </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  Showing {students.length} matching{" "}
-                  {students.length === 1 ? "student" : "students"}.
-                </p>
-              </div>
+              <p className="mt-1 text-sm text-slate-500">
+                Showing {students.length} matching{" "}
+                {students.length === 1 ? "student" : "students"}.
+              </p>
             </div>
 
-            <div className="mt-5 grid gap-6 md:grid-cols-2">
+            <div className="mt-5 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {students.map((student) => {
                 const skills = getSkills(student.skills);
                 const interests = getInterests(student.interests);
 
+                const matchPercentage = Math.min(
+                  Math.max(student.score * 100, 0),
+                  100
+                );
+
                 return (
                   <article
                     key={student.profile_id}
-                    className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-slate-300 hover:shadow-md"
+                    className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-md"
                   >
-                    {/* STUDENT HEADER */}
+                    {/* CARD HEADER */}
 
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex min-w-0 items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg font-semibold text-slate-700">
-                          {student.name
-                            .charAt(0)
-                            .toUpperCase()}
+                    <div className="p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex min-w-0 items-center gap-4">
+                          {/* AVATAR */}
+
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xl font-semibold text-white">
+                            {student.name
+                              ?.charAt(0)
+                              .toUpperCase() || "S"}
+                          </div>
+
+                          {/* BASIC INFO */}
+
+                          <div className="min-w-0">
+                            <h3 className="truncate text-lg font-semibold text-slate-950">
+                              {student.name}
+                            </h3>
+
+                            {student.degree && (
+                              <p className="mt-1 truncate text-sm text-slate-500">
+                                {student.degree}
+                              </p>
+                            )}
+
+                            {student.year && (
+                              <p className="mt-0.5 text-xs text-slate-400">
+                                {student.year}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
-                        <div className="min-w-0">
-                          <h3 className="truncate text-lg font-semibold text-slate-950">
-                            {student.name}
-                          </h3>
+                        {/* AVAILABILITY */}
 
-                          <p className="mt-1 text-sm text-slate-500">
-                            {student.degree}
-                          </p>
+                        {student.availability && (
+                          <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                            {student.availability}
+                          </span>
+                        )}
+                      </div>
 
-                          <p className="mt-0.5 text-xs text-slate-400">
-                            {student.year}
-                          </p>
+                      {/* MATCH */}
+
+                      <div className="mt-5 rounded-xl bg-slate-50 p-4">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                            Match
+                          </span>
+
+                          <span className="text-sm font-semibold text-slate-900">
+                            {matchPercentage.toFixed(1)}%
+                          </span>
+                        </div>
+
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                          <div
+                            className="h-full rounded-full bg-slate-900 transition-all"
+                            style={{
+                              width: `${matchPercentage}%`,
+                            }}
+                          />
                         </div>
                       </div>
 
-                      <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                        {student.availability}
-                      </span>
-                    </div>
+                      {/* SKILLS */}
 
-                    {/* MATCH SCORE */}
-
-                    <div className="mt-5 rounded-lg bg-slate-50 px-4 py-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                          Semantic match
-                        </span>
-
-                        <span className="text-sm font-semibold text-slate-900">
-                          {(student.score * 100).toFixed(1)}%
-                        </span>
-                      </div>
-
-                      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                        <div
-                          className="h-full rounded-full bg-slate-900 transition-all"
-                          style={{
-                            width: `${Math.min(
-                              Math.max(student.score * 100, 0),
-                              100
-                            )}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* PROFILE */}
-
-                    {student.profile && (
                       <div className="mt-5">
-                        <h4 className="text-sm font-semibold text-slate-900">
-                          Profile
-                        </h4>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          Skills
+                        </p>
 
-                        <p className="mt-2 line-clamp-4 whitespace-pre-line text-sm leading-6 text-slate-600">
+                        {skills.length > 0 ? (
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {skills.slice(0, 6).map((skill, index) => (
+                              <span
+                                key={`${skill}-${index}`}
+                                className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm text-slate-500">
+                            No skills listed.
+                          </p>
+                        )}
+                      </div>
+
+                      {/* INTERESTS */}
+
+                      {interests.length > 0 && (
+                        <div className="mt-5">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                            Interests
+                          </p>
+
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {interests.slice(0, 4).map((interest, index) => (
+                              <span
+                                key={`${interest}-${index}`}
+                                className="rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-600"
+                              >
+                                {interest}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* PROFILE PREVIEW */}
+
+                      {student.profile && (
+                        <p className="mt-5 line-clamp-2 text-sm leading-6 text-slate-500">
                           {student.profile}
                         </p>
-                      </div>
-                    )}
-
-                    {/* SKILLS */}
-
-                    <div className="mt-5">
-                      <h4 className="text-sm font-semibold text-slate-900">
-                        Skills
-                      </h4>
-
-                      {skills.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {skills.map((skill, index) => (
-                            <span
-                              key={`${skill}-${index}`}
-                              className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-sm text-slate-500">
-                          No skills listed.
-                        </p>
                       )}
-                    </div>
 
-                    {/* INTERESTS */}
+                      {/* VIEW PROFILE */}
 
-                    <div className="mt-5">
-                      <h4 className="text-sm font-semibold text-slate-900">
-                        Interests
-                      </h4>
-
-                      {interests.length > 0 ? (
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {interests.map((interest, index) => (
-                            <span
-                              key={`${interest}-${index}`}
-                              className="rounded-md bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
-                            >
-                              {interest}
-                            </span>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-2 text-sm text-slate-500">
-                          No interests listed.
-                        </p>
-                      )}
-                    </div>
-
-                    {/* CONTACT */}
-
-                    <div className="mt-6 border-t border-slate-100 pt-5">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                            Email
-                          </p>
-
-                          <p className="mt-1 break-all text-sm text-slate-700">
-                            {student.email}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                            Phone
-                          </p>
-
-                          <p className="mt-1 text-sm text-slate-700">
-                            {student.phone || "Not provided"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* VIEW PROFILE */}
-
-                    <div className="mt-6">
                       <Link
                         to={`/student/${student.profile_id}`}
-                        className="inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                        className="mt-6 inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
                       >
-                        View profile
+                        View full profile
                       </Link>
                     </div>
                   </article>

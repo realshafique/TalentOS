@@ -549,7 +549,6 @@ def delete_team(
 # ==================================================
 # AI SEMANTIC SEARCH
 # ==================================================
-
 @app.post("/search")
 def search_profiles(search_request: SearchRequest):
     query_embedding = create_embedding(
@@ -570,7 +569,14 @@ def search_profiles(search_request: SearchRequest):
             {
                 "profile_id": point.payload.get("profile_id"),
                 "name": point.payload.get("name"),
-                "skills": point.payload.get("skills"),
+                "email": point.payload.get("email"),
+                "phone": point.payload.get("phone"),
+                "degree": point.payload.get("degree"),
+                "year": point.payload.get("year"),
+                "skills": point.payload.get("skills", []),
+                "interests": point.payload.get("interests", []),
+                "availability": point.payload.get("availability"),
+                "profile": point.payload.get("profile"),
                 "score": point.score,
             }
             for point in results.points
