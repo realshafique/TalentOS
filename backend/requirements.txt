@@ -9,3 +9,4 @@ psycopg2-binary
 qdrant-client
 python-dotenv
 requests
+psycopg[binary]
