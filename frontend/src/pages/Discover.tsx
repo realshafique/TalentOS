@@ -241,7 +241,9 @@ function Discover() {
             </div>
 
 
-            {/* REQUIREMENT SUMMARY */}
+            {/* ======================================
+                REQUIREMENT SUMMARY
+            ====================================== */}
 
             {recommendation.requirement_summary && (
               <div className="mt-6 rounded-xl bg-slate-50 p-5">
@@ -289,7 +291,9 @@ function Discover() {
                         className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
                       >
 
-                        {/* CANDIDATE HEADER */}
+                        {/* ==================================
+                            CANDIDATE HEADER
+                        ================================== */}
 
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
@@ -326,69 +330,89 @@ function Discover() {
                         </div>
 
 
-                        {/* ANALYSIS */}
+                        {/* ==================================
+                            HIGHLIGHTED ANALYSIS
+                        ================================== */}
 
-                        <div className="mt-5 grid gap-5 md:grid-cols-2">
+                        <div className="mt-5 grid gap-4 md:grid-cols-2">
 
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          {/* SKILL ALIGNMENT */}
+
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                               Skill Alignment
                             </p>
 
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                            <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
                               {candidate.skill_alignment ||
                                 "Not specified"}
                             </p>
+
                           </div>
 
 
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          {/* EXPERIENCE RELEVANCE */}
+
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                               Experience Relevance
                             </p>
 
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                            <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
                               {candidate.experience_relevance ||
                                 "Not specified"}
                             </p>
+
                           </div>
 
 
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          {/* AVAILABILITY */}
+
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                               Availability
                             </p>
 
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                            <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
                               {candidate.availability ||
                                 "Not specified"}
                             </p>
+
                           </div>
 
 
-                          <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          {/* WHY THIS PROFILE MATCHES */}
+
+                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                               Why This Profile Matches
                             </p>
 
-                            <p className="mt-2 text-sm leading-6 text-slate-600">
+                            <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
                               {candidate.why_match ||
                                 "Not specified"}
                             </p>
+
                           </div>
 
                         </div>
 
 
-                        {/* POTENTIAL CONTRIBUTION */}
+                        {/* ==================================
+                            POTENTIAL CONTRIBUTION
+                        ================================== */}
 
-                        <div className="mt-5 rounded-lg bg-slate-50 p-4">
+                        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
 
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Potential Contribution
                           </p>
 
-                          <p className="mt-2 text-sm leading-6 text-slate-700">
+                          <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
                             {candidate.potential_contribution ||
                               "Not specified"}
                           </p>
@@ -397,7 +421,7 @@ function Discover() {
 
 
                         {/* ==================================
-                            BLACK VIEW PROFILE BUTTON
+                            VIEW PROFILE
                         ================================== */}
 
                         <Link
