@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 
@@ -42,21 +42,101 @@ type Recommendation = {
 };
 
 function Discover() {
-  const [query, setQuery] = useState("");
+  // ==========================================
+  // STATE
+  // ==========================================
 
-  const [students, setStudents] = useState<Student[]>(
-    []
-  );
+  const [query, setQuery] = useState(() => {
+    return (
+      sessionStorage.getItem(
+        "talentos_discover_query"
+      ) || ""
+    );
+  });
+
+  const [students, setStudents] = useState<Student[]>(() => {
+    try {
+      const saved = sessionStorage.getItem(
+        "talentos_discover_students"
+      );
+
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [recommendation, setRecommendation] =
-    useState<Recommendation | null>(null);
+    useState<Recommendation | null>(() => {
+      try {
+        const saved = sessionStorage.getItem(
+          "talentos_discover_recommendation"
+        );
+
+        return saved ? JSON.parse(saved) : null;
+      } catch {
+        return null;
+      }
+    });
 
   const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+
+  const [searched, setSearched] = useState(() => {
+    return (
+      sessionStorage.getItem(
+        "talentos_discover_searched"
+      ) === "true"
+    );
+  });
+
+
+  // ==========================================
+  // SAVE DISCOVER STATE
+  // ==========================================
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      "talentos_discover_query",
+      query
+    );
+
+    sessionStorage.setItem(
+      "talentos_discover_students",
+      JSON.stringify(students)
+    );
+
+    sessionStorage.setItem(
+      "talentos_discover_searched",
+      String(searched)
+    );
+
+    if (recommendation) {
+      sessionStorage.setItem(
+        "talentos_discover_recommendation",
+        JSON.stringify(recommendation)
+      );
+    } else {
+      sessionStorage.removeItem(
+        "talentos_discover_recommendation"
+      );
+    }
+  }, [
+    query,
+    students,
+    recommendation,
+    searched,
+  ]);
+
+
+  // ==========================================
+  // SEARCH
+  // ==========================================
 
   const handleSearch = async () => {
     if (!query.trim()) {
-      alert("Please enter what kind of teammate you need.");
+      alert(
+        "Please enter what kind of teammate you need."
+      );
       return;
     }
 
@@ -64,6 +144,8 @@ function Discover() {
       setLoading(true);
       setSearched(true);
 
+      // Clear old search results
+      // because this is a NEW search.
       setStudents([]);
       setRecommendation(null);
 
@@ -89,6 +171,7 @@ function Discover() {
       setRecommendation(
         response.data.recommendation || null
       );
+
     } catch (error) {
       console.error(
         "AI recommendation error:",
@@ -115,13 +198,16 @@ function Discover() {
           "Unable to generate AI recommendation."
         );
       }
+
     } finally {
       setLoading(false);
     }
   };
 
+
   return (
     <div className="min-h-screen bg-slate-50">
+
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
@@ -131,6 +217,7 @@ function Discover() {
         ========================================== */}
 
         <div>
+
           <p className="text-sm font-medium text-slate-500">
             AI-powered talent discovery
           </p>
@@ -144,6 +231,7 @@ function Discover() {
             will find relevant students using semantic
             search and AI-powered analysis.
           </p>
+
         </div>
 
 
@@ -214,7 +302,8 @@ function Discover() {
             </p>
 
             <p className="mt-1 text-xs text-slate-400">
-              Searching profiles and generating recommendations.
+              Searching profiles and generating
+              recommendations.
             </p>
 
           </div>
@@ -226,11 +315,15 @@ function Discover() {
         ========================================== */}
 
         {!loading && recommendation && (
+
           <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
-            {/* TITLE */}
+            {/* ======================================
+                TITLE
+            ====================================== */}
 
             <div>
+
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 TalentOS AI
               </p>
@@ -238,6 +331,7 @@ function Discover() {
               <h2 className="mt-1 text-2xl font-bold text-slate-950">
                 AI Recommendation
               </h2>
+
             </div>
 
 
@@ -246,6 +340,7 @@ function Discover() {
             ====================================== */}
 
             {recommendation.requirement_summary && (
+
               <div className="mt-6 rounded-xl bg-slate-50 p-5">
 
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -257,6 +352,7 @@ function Discover() {
                 </p>
 
               </div>
+
             )}
 
 
@@ -271,6 +367,7 @@ function Discover() {
               <div className="mt-8">
 
                 <div>
+
                   <h3 className="text-lg font-semibold text-slate-950">
                     Candidate Analysis
                   </h3>
@@ -278,6 +375,7 @@ function Discover() {
                   <p className="mt-1 text-sm text-slate-500">
                     Relevant students identified by TalentOS.
                   </p>
+
                 </div>
 
 
@@ -286,115 +384,37 @@ function Discover() {
                   {recommendation.candidate_analysis.map(
                     (candidate) => (
 
-                      <article
-                        key={candidate.profile_id}
-                        className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-                      >
+                    <article
+                      key={candidate.profile_id}
+                      className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                    >
 
-                        {/* ==================================
-                            CANDIDATE HEADER
-                        ================================== */}
+                      {/* ==================================
+                          CANDIDATE HEADER
+                      ================================== */}
 
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-                          <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3">
 
-                            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
-                              {candidate.name
-                                ?.charAt(0)
-                                .toUpperCase() || "S"}
-                            </div>
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
 
-                            <div>
-
-                              <h4 className="font-semibold text-slate-950">
-                                {candidate.name}
-                              </h4>
-
-                              <p className="text-xs text-slate-400">
-                                Profile ID:{" "}
-                                {candidate.profile_id}
-                              </p>
-
-                            </div>
+                            {candidate.name
+                              ?.charAt(0)
+                              .toUpperCase() || "S"}
 
                           </div>
 
 
-                          {/* MATCH LEVEL */}
+                          <div>
 
-                          <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                            {candidate.match_level}
-                          </span>
+                            <h4 className="font-semibold text-slate-950">
+                              {candidate.name}
+                            </h4>
 
-                        </div>
-
-
-                        {/* ==================================
-                            HIGHLIGHTED ANALYSIS
-                        ================================== */}
-
-                        <div className="mt-5 grid gap-4 md:grid-cols-2">
-
-                          {/* SKILL ALIGNMENT */}
-
-                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Skill Alignment
-                            </p>
-
-                            <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
-                              {candidate.skill_alignment ||
-                                "Not specified"}
-                            </p>
-
-                          </div>
-
-
-                          {/* EXPERIENCE RELEVANCE */}
-
-                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Experience Relevance
-                            </p>
-
-                            <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
-                              {candidate.experience_relevance ||
-                                "Not specified"}
-                            </p>
-
-                          </div>
-
-
-                          {/* AVAILABILITY */}
-
-                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Availability
-                            </p>
-
-                            <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
-                              {candidate.availability ||
-                                "Not specified"}
-                            </p>
-
-                          </div>
-
-
-                          {/* WHY THIS PROFILE MATCHES */}
-
-                          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                              Why This Profile Matches
-                            </p>
-
-                            <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
-                              {candidate.why_match ||
-                                "Not specified"}
+                            <p className="text-xs text-slate-400">
+                              Profile ID:{" "}
+                              {candidate.profile_id}
                             </p>
 
                           </div>
@@ -402,43 +422,124 @@ function Discover() {
                         </div>
 
 
-                        {/* ==================================
-                            POTENTIAL CONTRIBUTION
-                        ================================== */}
+                        {/* MATCH LEVEL */}
 
-                        <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                          {candidate.match_level}
+                        </span>
+
+                      </div>
+
+
+                      {/* ==================================
+                          HIGHLIGHTED ANALYSIS
+                      ================================== */}
+
+                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+
+                        {/* SKILL ALIGNMENT */}
+
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
 
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            Potential Contribution
+                            Skill Alignment
                           </p>
 
-                          <p className="mt-2 text-sm leading-6 font-medium text-slate-800">
-                            {candidate.potential_contribution ||
+                          <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                            {candidate.skill_alignment ||
                               "Not specified"}
                           </p>
 
                         </div>
 
 
-                        {/* ==================================
-                            VIEW PROFILE
-                        ================================== */}
+                        {/* EXPERIENCE RELEVANCE */}
 
-                        <Link
-                          to={`/student/${candidate.profile_id}`}
-                          className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-                        >
-                          View Full Profile
-                        </Link>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
 
-                      </article>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Experience Relevance
+                          </p>
 
-                    )
-                  )}
+                          <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                            {candidate.experience_relevance ||
+                              "Not specified"}
+                          </p>
+
+                        </div>
+
+
+                        {/* AVAILABILITY */}
+
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Availability
+                          </p>
+
+                          <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                            {candidate.availability ||
+                              "Not specified"}
+                          </p>
+
+                        </div>
+
+
+                        {/* WHY THIS PROFILE MATCHES */}
+
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            Why This Profile Matches
+                          </p>
+
+                          <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                            {candidate.why_match ||
+                              "Not specified"}
+                          </p>
+
+                        </div>
+
+                      </div>
+
+
+                      {/* ==================================
+                          POTENTIAL CONTRIBUTION
+                      ================================== */}
+
+                      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Potential Contribution
+                        </p>
+
+                        <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                          {candidate.potential_contribution ||
+                            "Not specified"}
+                        </p>
+
+                      </div>
+
+
+                      {/* ==================================
+                          VIEW PROFILE
+                      ================================== */}
+
+                      <Link
+                        to={`/student/${candidate.profile_id}`}
+                        className="mt-5 inline-flex w-full items-center justify-center rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                      >
+                        View Full Profile
+                      </Link>
+
+                    </article>
+
+                  ))}
 
                 </div>
 
               </div>
+
             )}
 
 
@@ -466,19 +567,19 @@ function Discover() {
                   {recommendation.skill_coverage.map(
                     (skill, index) => (
 
-                      <span
-                        key={`${skill}-${index}`}
-                        className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
-                      >
-                        {skill}
-                      </span>
+                    <span
+                      key={`${skill}-${index}`}
+                      className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
+                    >
+                      {skill}
+                    </span>
 
-                    )
-                  )}
+                  ))}
 
                 </div>
 
               </div>
+
             )}
 
 
@@ -506,19 +607,19 @@ function Discover() {
                   {recommendation.potential_skill_gaps.map(
                     (gap, index) => (
 
-                      <div
-                        key={`${gap}-${index}`}
-                        className="rounded-lg border border-slate-200 px-4 py-3 text-sm text-slate-600"
-                      >
-                        {gap}
-                      </div>
+                    <div
+                      key={`${gap}-${index}`}
+                      className="rounded-lg border border-slate-200 px-4 py-3 text-sm text-slate-600"
+                    >
+                      {gap}
+                    </div>
 
-                    )
-                  )}
+                  ))}
 
                 </div>
 
               </div>
+
             )}
 
 
@@ -527,6 +628,7 @@ function Discover() {
             ========================================== */}
 
             {recommendation.team_insight && (
+
               <div className="mt-8 rounded-xl bg-slate-900 p-5">
 
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -538,9 +640,11 @@ function Discover() {
                 </p>
 
               </div>
+
             )}
 
           </section>
+
         )}
 
 
@@ -565,11 +669,13 @@ function Discover() {
             </p>
 
           </div>
+
         )}
 
       </main>
 
       <Footer />
+
     </div>
   );
 }
