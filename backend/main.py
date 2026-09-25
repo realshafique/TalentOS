@@ -1,18 +1,28 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from qdrant_client.models import PointStruct
 
 from database import engine, Base, get_db
-from models import Profile, Project, Team, TeamMember
+from models import User, Profile, Project, Team, TeamMember
 
 from schemas import (
+    RegisterRequest,
+    LoginRequest,
     ProfileCreate,
     SearchRequest,
     TeamCreate,
     TeamMemberCreate,
+)
+
+from auth import (
+    hash_password,
+    verify_password,
+    create_access_token,
+    get_current_user,
 )
 
 from profile_embedding import create_profile_embedding
@@ -26,13 +36,12 @@ from vector_db import (
 from qdrant_service import client
 
 
-# ==================================================
+# ==========================================
 # STARTUP
-# ==================================================
+# ==========================================
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     print("Starting TalentOS backend...")
 
     try:
@@ -53,9 +62,9 @@ async def lifespan(app: FastAPI):
     print("TalentOS backend shutting down...")
 
 
-# ==================================================
-# FASTAPI APP
-# ==================================================
+# ==========================================
+# APP
+# ==========================================
 
 app = FastAPI(
     title="TalentOS API",
@@ -65,9 +74,9 @@ app = FastAPI(
 )
 
 
-# ==================================================
+# ==========================================
 # CORS
-# ==================================================
+# ==========================================
 
 app.add_middleware(
     CORSMiddleware,
@@ -82,9 +91,9 @@ app.add_middleware(
 )
 
 
-# ==================================================
+# ==========================================
 # HOME
-# ==================================================
+# ==========================================
 
 @app.get("/")
 def home():
@@ -93,16 +102,187 @@ def home():
     }
 
 
-# ==================================================
+# ==========================================
+# AUTH - REGISTER
+# ==========================================
+
+@app.post("/auth/register")
+def register(
+    register_data: RegisterRequest,
+    db: Session = Depends(get_db),
+):
+    email = register_data.email.lower().strip()
+
+    if len(register_data.password) < 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters long.",
+        )
+
+    existing_user = (
+        db.query(User)
+        .filter(User.email == email)
+        .first()
+    )
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="An account with this email already exists.",
+        )
+
+    new_user = User(
+        email=email,
+        password_hash=hash_password(register_data.password),
+    )
+
+    db.add(new_user)
+    db.flush()
+
+    # Automatically connect an existing profile
+    # if the email matches.
+    existing_profile = (
+        db.query(Profile)
+        .filter(Profile.email == email)
+        .first()
+    )
+
+    if existing_profile:
+        if existing_profile.user_id is not None:
+            db.rollback()
+
+            raise HTTPException(
+                status_code=400,
+                detail="This profile is already connected to another account.",
+            )
+
+        existing_profile.user_id = new_user.id
+
+    db.commit()
+    db.refresh(new_user)
+
+    access_token = create_access_token(new_user.id)
+
+    return {
+        "message": "Account created successfully",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": new_user.id,
+            "email": new_user.email,
+            "profile_id": (
+                existing_profile.id
+                if existing_profile
+                else None
+            ),
+        },
+    }
+
+
+# ==========================================
+# AUTH - LOGIN
+# ==========================================
+
+@app.post("/auth/login")
+def login(
+    login_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    email = login_data.username.lower().strip()
+
+    user = (
+        db.query(User)
+        .filter(User.email == email)
+        .first()
+    )
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password.",
+        )
+
+    if not verify_password(
+        login_data.password,
+        user.password_hash,
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password.",
+        )
+
+    access_token = create_access_token(user.id)
+
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == user.id)
+        .first()
+    )
+
+    return {
+        "message": "Login successful",
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "profile_id": (
+                profile.id
+                if profile
+                else None
+            ),
+        },
+    }
+# ==========================================
+# AUTH - CURRENT USER
+# ==========================================
+
+@app.get("/auth/me")
+def get_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == current_user.id)
+        .first()
+    )
+
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "profile_id": (
+            profile.id
+            if profile
+            else None
+        ),
+    }
+
+
+# ==========================================
 # CREATE PROFILE
-# ==================================================
+# ==========================================
 
 @app.post("/profiles")
 def create_profile(
     profile: ProfileCreate,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
+    # Check if this account already owns a profile.
+    existing_user_profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == current_user.id)
+        .first()
+    )
 
+    if existing_user_profile:
+        raise HTTPException(
+            status_code=400,
+            detail="This account already has a profile.",
+        )
+
+    # Check duplicate email.
     existing_profile = (
         db.query(Profile)
         .filter(Profile.email == profile.email)
@@ -116,6 +296,7 @@ def create_profile(
         )
 
     new_profile = Profile(
+        user_id=current_user.id,
         name=profile.name,
         email=profile.email,
         phone=profile.phone,
@@ -176,6 +357,7 @@ def create_profile(
             "phone": new_profile.phone,
             "degree": new_profile.degree,
             "year": new_profile.year,
+            "about": new_profile.about,
             "skills": profile.skills,
             "interests": profile.interests,
             "availability": profile.availability,
@@ -192,13 +374,14 @@ def create_profile(
     }
 
 
-# ==================================================
+# ==========================================
 # GET ALL PROFILES
-# ==================================================
+# ==========================================
 
 @app.get("/profiles")
-def get_profiles(db: Session = Depends(get_db)):
-
+def get_profiles(
+    db: Session = Depends(get_db),
+):
     profiles = db.query(Profile).all()
 
     return [
@@ -219,17 +402,17 @@ def get_profiles(db: Session = Depends(get_db)):
     ]
 
 
-# ==================================================
+# ==========================================
 # UPDATE PROFILE
-# ==================================================
+# ==========================================
 
 @app.put("/profiles/{profile_id}")
 def update_profile(
     profile_id: int,
     profile: ProfileCreate,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-
     existing_profile = (
         db.query(Profile)
         .filter(Profile.id == profile_id)
@@ -240,6 +423,13 @@ def update_profile(
         raise HTTPException(
             status_code=404,
             detail="Student profile not found.",
+        )
+
+    # Ownership check
+    if existing_profile.user_id != current_user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not authorized to edit this profile.",
         )
 
     duplicate_email = (
@@ -335,16 +525,16 @@ def update_profile(
     }
 
 
-# ==================================================
+# ==========================================
 # CREATE TEAM
-# ==================================================
+# ==========================================
 
 @app.post("/teams")
 def create_team(
     team: TeamCreate,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-
     new_team = Team(
         name=team.name,
         project=team.project,
@@ -365,57 +555,51 @@ def create_team(
     }
 
 
-# ==================================================
-# GET ALL TEAMS
-# ==================================================
+# ==========================================
+# GET TEAMS
+# ==========================================
 
 @app.get("/teams")
 def get_teams(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-
     teams = db.query(Team).all()
 
     results = []
 
     for team in teams:
-
         members = []
 
         for member in team.members:
-            members.append(
-                {
-                    "id": member.id,
-                    "profile_id": member.profile_id,
-                    "name": member.profile.name,
-                    "degree": member.profile.degree,
-                    "role": member.role,
-                }
-            )
+            members.append({
+                "id": member.id,
+                "profile_id": member.profile_id,
+                "name": member.profile.name,
+                "degree": member.profile.degree,
+                "role": member.role,
+            })
 
-        results.append(
-            {
-                "id": team.id,
-                "name": team.name,
-                "project": team.project,
-                "members": members,
-            }
-        )
+        results.append({
+            "id": team.id,
+            "name": team.name,
+            "project": team.project,
+            "members": members,
+        })
 
     return results
 
 
-# ==================================================
-# ADD MEMBER TO TEAM
-# ==================================================
+# ==========================================
+# ADD TEAM MEMBER
+# ==========================================
 
 @app.post("/teams/{team_id}/members")
 def add_team_member(
     team_id: int,
     member: TeamMemberCreate,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-
     team = (
         db.query(Team)
         .filter(Team.id == team_id)
@@ -478,17 +662,17 @@ def add_team_member(
     }
 
 
-# ==================================================
+# ==========================================
 # DELETE TEAM MEMBER
-# ==================================================
+# ==========================================
 
 @app.delete("/teams/{team_id}/members/{member_id}")
 def delete_team_member(
     team_id: int,
     member_id: int,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-
     member = (
         db.query(TeamMember)
         .filter(
@@ -512,16 +696,16 @@ def delete_team_member(
     }
 
 
-# ==================================================
+# ==========================================
 # DELETE TEAM
-# ==================================================
+# ==========================================
 
 @app.delete("/teams/{team_id}")
 def delete_team(
     team_id: int,
-    db: Session = Depends(get_db)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-
     team = (
         db.query(Team)
         .filter(Team.id == team_id)
@@ -531,12 +715,14 @@ def delete_team(
     if not team:
         raise HTTPException(
             status_code=404,
-            detail="Team not found."
+            detail="Team not found.",
         )
 
     db.query(TeamMember).filter(
         TeamMember.team_id == team_id
-    ).delete(synchronize_session=False)
+    ).delete(
+        synchronize_session=False
+    )
 
     db.delete(team)
     db.commit()
@@ -546,14 +732,17 @@ def delete_team(
     }
 
 
-# ==================================================
-# AI SEMANTIC SEARCH
-# ==================================================
+# ==========================================
+# AI SEARCH
+# ==========================================
+
 @app.post("/search")
-def search_profiles(search_request: SearchRequest):
+def search_profiles(
+    search_request: SearchRequest,
+):
     query_embedding = create_embedding(
         search_request.query,
-        task="retrieval.query"
+        task="retrieval.query",
     )
 
     results = client.query_points(

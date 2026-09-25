@@ -1,6 +1,7 @@
 import API_URL from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -46,6 +47,8 @@ const emptyProfile: Profile = {
 };
 
 function CreateProfile() {
+  const navigate = useNavigate();
+
   const [profile, setProfile] = useState<Profile>(emptyProfile);
 
   const [profileId, setProfileId] = useState<number | null>(null);
@@ -59,35 +62,40 @@ function CreateProfile() {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const savedProfileId = localStorage.getItem("talentos_profile_id");
+    const token = localStorage.getItem("talentos_access_token");
 
-    if (!savedProfileId) {
-      setLoadingProfile(false);
-      return;
-    }
-
-    const id = Number(savedProfileId);
-
-    if (!id) {
-      setLoadingProfile(false);
+    if (!token) {
+      navigate("/login");
       return;
     }
 
     const fetchProfile = async () => {
       try {
-        const response = await axios.get(
-          `${API_URL}/profiles`
+        const authHeaders = {
+          Authorization: `Bearer ${token}`,
+        };
+
+        const meResponse = await axios.get(
+          `${API_URL}/auth/me`,
+          { headers: authHeaders }
         );
 
-        const profiles = response.data;
+        const currentUser = meResponse.data;
 
-        const existingProfile = profiles.find(
+        if (!currentUser.profile_id) {
+          setLoadingProfile(false);
+          return;
+        }
+
+        const id = Number(currentUser.profile_id);
+        setProfileId(id);
+
+        const response = await axios.get(`${API_URL}/profiles`);
+        const existingProfile = response.data.find(
           (item: any) => item.id === id
         );
 
         if (existingProfile) {
-          setProfileId(id);
-
           setProfile({
             name: existingProfile.name || "",
             email: existingProfile.email || "",
@@ -95,53 +103,40 @@ function CreateProfile() {
             degree: existingProfile.degree || "",
             year: existingProfile.year || "",
             about: existingProfile.about || "",
-
             skills: Array.isArray(existingProfile.skills)
               ? existingProfile.skills
               : existingProfile.skills
-                ? existingProfile.skills
-                    .split(",")
-                    .map((skill: string) => skill.trim())
-                    .filter(Boolean)
+                ? existingProfile.skills.split(",").map((skill: string) => skill.trim()).filter(Boolean)
                 : [],
-
             interests: Array.isArray(existingProfile.interests)
               ? existingProfile.interests
               : existingProfile.interests
-                ? existingProfile.interests
-                    .split(",")
-                    .map((interest: string) => interest.trim())
-                    .filter(Boolean)
+                ? existingProfile.interests.split(",").map((interest: string) => interest.trim()).filter(Boolean)
                 : [],
-
             projects:
-              existingProfile.projects &&
-              existingProfile.projects.length > 0
+              existingProfile.projects && existingProfile.projects.length > 0
                 ? existingProfile.projects
-                : [
-                    {
-                      id: Date.now(),
-                      name: "",
-                      description: "",
-                      technologies: "",
-                    },
-                  ],
-
-            availability:
-              existingProfile.availability || "Available",
+                : [{ id: Date.now(), name: "", description: "", technologies: "" }],
+            availability: existingProfile.availability || "Available",
           });
 
           setIsEditing(true);
         }
       } catch (error) {
         console.error("Failed to load profile:", error);
+
+        if (axios.isAxiosError(error) && error.response?.status === 401) {
+          localStorage.removeItem("talentos_access_token");
+          navigate("/login");
+          return;
+        }
       } finally {
         setLoadingProfile(false);
       }
     };
 
     fetchProfile();
-  }, []);
+  }, [navigate]);
 
   const handleChange = (
     event: React.ChangeEvent<
@@ -305,31 +300,36 @@ function CreateProfile() {
     try {
       setLoading(true);
 
+      const token = localStorage.getItem("talentos_access_token");
+
+      if (!token) {
+        navigate("/login");
+        return;
+      }
+
+      const authHeaders = {
+        Authorization: `Bearer ${token}`,
+      };
+
       let response;
 
       if (isEditing && profileId) {
         response = await axios.put(
           `${API_URL}/profiles/${profileId}`,
-          profile
+          profile,
+          { headers: authHeaders }
         );
-
         alert("Profile updated successfully!");
       } else {
         response = await axios.post(
           `${API_URL}/profiles`,
-          profile
+          profile,
+          { headers: authHeaders }
         );
 
         const newProfileId = response.data.profile.id;
-
-        localStorage.setItem(
-          "talentos_profile_id",
-          String(newProfileId)
-        );
-
         setProfileId(newProfileId);
         setIsEditing(true);
-
         alert("Profile created successfully!");
       }
 
@@ -337,29 +337,27 @@ function CreateProfile() {
     } catch (error) {
       console.error("Profile request failed:", error);
 
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        localStorage.removeItem("talentos_access_token");
+        navigate("/login");
+        return;
+      }
+
       if (axios.isAxiosError(error)) {
         const detail = error.response?.data?.detail;
 
         if (Array.isArray(detail)) {
           const messages = detail
             .map((item: any) => {
-              const field = Array.isArray(item.loc)
-                ? item.loc.join(".")
-                : "field";
-
+              const field = Array.isArray(item.loc) ? item.loc.join(".") : "field";
               return `${field}: ${item.msg}`;
             })
             .join("\n");
-
           alert(messages);
         } else if (detail) {
           alert(detail);
         } else {
-          alert(
-            isEditing
-              ? "Failed to update profile."
-              : "Failed to create profile."
-          );
+          alert(isEditing ? "Failed to update profile." : "Failed to create profile.");
         }
       } else {
         alert("Something went wrong.");

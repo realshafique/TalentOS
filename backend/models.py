@@ -1,8 +1,52 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from database import Base
 
+
+# ==================================================
+# USER / AUTHENTICATION
+# ==================================================
+
+class User(Base):
+
+    __tablename__ = "users"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    email = Column(
+        String(150),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    password_hash = Column(
+        String(255),
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    profile = relationship(
+        "Profile",
+        back_populates="user",
+        uselist=False
+    )
+
+
+# ==================================================
+# PROFILE
+# ==================================================
 
 class Profile(Base):
 
@@ -12,6 +56,16 @@ class Profile(Base):
         Integer,
         primary_key=True,
         index=True
+    )
+
+    # Links a profile to its authenticated account.
+    # Nullable because your existing 14 profiles
+    # don't have accounts yet.
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id"),
+        nullable=True,
+        unique=True
     )
 
     name = Column(
@@ -60,12 +114,21 @@ class Profile(Base):
         nullable=False
     )
 
+    user = relationship(
+        "User",
+        back_populates="profile"
+    )
+
     projects = relationship(
         "Project",
         back_populates="profile",
         cascade="all, delete-orphan"
     )
 
+
+# ==================================================
+# PROJECT
+# ==================================================
 
 class Project(Base):
 
@@ -104,6 +167,10 @@ class Project(Base):
     )
 
 
+# ==================================================
+# TEAM
+# ==================================================
+
 class Team(Base):
 
     __tablename__ = "teams"
@@ -130,6 +197,10 @@ class Team(Base):
         cascade="all, delete-orphan"
     )
 
+
+# ==================================================
+# TEAM MEMBER
+# ==================================================
 
 class TeamMember(Base):
 

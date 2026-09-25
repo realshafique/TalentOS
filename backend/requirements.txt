@@ -10,3 +10,6 @@ qdrant-client
 python-dotenv
 requests
 psycopg[binary]
+PyJWT
+email-validator
+pwdlib[argon2]

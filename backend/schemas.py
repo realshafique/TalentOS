@@ -1,10 +1,24 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import List
 
 
-# ==================================================
-# PROJECT
-# ==================================================
+# =========================
+# AUTH
+# =========================
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+# =========================
+# PROFILE
+# =========================
 
 class Project(BaseModel):
     id: int
@@ -13,13 +27,9 @@ class Project(BaseModel):
     technologies: str
 
 
-# ==================================================
-# PROFILE
-# ==================================================
-
 class ProfileCreate(BaseModel):
     name: str
-    email: str
+    email: EmailStr
     phone: str | None = None
     degree: str
     year: str
@@ -30,18 +40,18 @@ class ProfileCreate(BaseModel):
     availability: str
 
 
-# ==================================================
+# =========================
 # SEARCH
-# ==================================================
+# =========================
 
 class SearchRequest(BaseModel):
     query: str
     limit: int = 5
 
 
-# ==================================================
-# TEAM
-# ==================================================
+# =========================
+# TEAMS
+# =========================
 
 class TeamCreate(BaseModel):
     name: str

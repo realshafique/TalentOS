@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
+import Login from "./Login";
+import Register from "./Register";
+
 import Home from "./pages/Home";
 import Discover from "./pages/Discover";
 import Teams from "./pages/Teams";
@@ -11,43 +14,20 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Home />} />
 
-        {/* Home */}
-        <Route
-          path="/"
-          element={<Home />}
-        />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
-        {/* AI Talent Discovery */}
-        <Route
-          path="/discover"
-          element={<Discover />}
-        />
+        <Route path="/discover" element={<Discover />} />
+        <Route path="/teams" element={<Teams />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/create-profile" element={<CreateProfile />} />
 
-        {/* Teams */}
-        <Route
-          path="/teams"
-          element={<Teams />}
-        />
-
-        {/* Current User Profile */}
-        <Route
-          path="/profile"
-          element={<Profile />}
-        />
-
-        {/* Create Profile */}
-        <Route
-          path="/create-profile"
-          element={<CreateProfile />}
-        />
-
-        {/* Student Profile */}
         <Route
           path="/student/:studentId"
           element={<StudentProfile />}
         />
-
       </Routes>
     </BrowserRouter>
   );
