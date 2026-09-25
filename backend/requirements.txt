@@ -13,3 +13,4 @@ psycopg[binary]
 PyJWT
 email-validator
 pwdlib[argon2]
+python-multipart
