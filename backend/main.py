@@ -8,6 +8,10 @@ from qdrant_client.models import PointStruct
 
 from database import engine, Base, get_db
 from models import User, Profile, Project, Team, TeamMember
+from llm import generate_ai_response
+from embedding import create_embedding
+from qdrant_service import client
+
 
 from schemas import (
     RegisterRequest,
@@ -777,3 +781,135 @@ def search_profiles(
             for point in results.points
         ],
     }
+@app.get("/ai/test")
+def test_ai():
+    response = generate_ai_response(
+        "Explain TalentOS in one short sentence."
+    )
+
+    return {
+        "response": response
+    }
+@app.post("/ai/recommend")
+def ai_recommend(search_request: SearchRequest):
+    try:
+        # --------------------------------
+        # 1. Convert user query to embedding
+        # --------------------------------
+        query_embedding = create_embedding(
+            search_request.query,
+            task="retrieval.query"
+        )
+
+        # --------------------------------
+        # 2. Search Qdrant
+        # --------------------------------
+        results = client.query_points(
+            collection_name="talentos_v2",
+            query=query_embedding,
+            limit=5,
+            with_payload=True,
+        )
+
+        profiles = []
+
+        for point in results.points:
+            payload = point.payload or {}
+
+            profiles.append({
+                "profile_id": payload.get("profile_id"),
+                "name": payload.get("name"),
+                "institution": payload.get("institution"),
+                "degree": payload.get("degree"),
+                "year": payload.get("year"),
+                "skills": payload.get("skills", []),
+                "interests": payload.get("interests", []),
+                "availability": payload.get("availability"),
+                "profile": payload.get("profile"),
+                "score": round(point.score, 4),
+            })
+
+        # --------------------------------
+        # 3. Check if profiles were found
+        # --------------------------------
+        if not profiles:
+            return {
+                "query": search_request.query,
+                "profiles": [],
+                "recommendation": (
+                    "No matching profiles were found "
+                    "for this search."
+                ),
+            }
+
+        # --------------------------------
+        # 4. Prepare profiles for LLM
+        # --------------------------------
+        profile_context = ""
+
+        for index, profile in enumerate(profiles, start=1):
+            profile_context += f"""
+Student {index}
+
+Name: {profile["name"]}
+Institution: {profile["institution"]}
+Degree: {profile["degree"]}
+Year: {profile["year"]}
+Skills: {", ".join(profile["skills"])}
+Interests: {", ".join(profile["interests"])}
+Availability: {profile["availability"]}
+Profile: {profile["profile"]}
+Semantic similarity score: {profile["score"]}
+-------------------------
+"""
+
+        # --------------------------------
+        # 5. Ask LLM to explain matches
+        # --------------------------------
+        prompt = f"""
+You are the AI recommendation assistant for TalentOS,
+a university talent discovery and team formation platform.
+
+A student searched for:
+
+"{search_request.query}"
+
+Below are the students retrieved by TalentOS's semantic
+search system.
+
+{profile_context}
+
+Your task is to explain which students are relevant to
+the user's request.
+
+Rules:
+- Only use information provided in the profiles.
+- Do not invent skills, projects, experience, or achievements.
+- Explain why each relevant student matches the query.
+- Mention important matching skills or interests.
+- Consider availability when relevant.
+- Keep the response concise and useful.
+- Do not rank students as "best" or "worst".
+- Do not make claims that are not supported by the profiles.
+
+Return a short natural-language recommendation.
+"""
+
+        recommendation = generate_ai_response(prompt)
+
+        # --------------------------------
+        # 6. Return results
+        # --------------------------------
+        return {
+            "query": search_request.query,
+            "profiles": profiles,
+            "recommendation": recommendation,
+        }
+
+    except Exception as e:
+        print(f"AI recommendation error: {e}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="AI recommendation failed."
+        )
