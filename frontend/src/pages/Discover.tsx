@@ -12,6 +12,7 @@ type Student = {
   name: string;
   email?: string;
   phone?: string | null;
+  institution?: string | null;
   degree?: string;
   year?: string;
   skills: string[] | string;
@@ -24,6 +25,7 @@ type Student = {
 function Discover() {
   const [query, setQuery] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
+  const [recommendation, setRecommendation] = useState("");
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
@@ -37,17 +39,22 @@ function Discover() {
       setLoading(true);
       setSearched(true);
       setStudents([]);
+      setRecommendation("");
 
-      const response = await axios.post(`${API_URL}/search`, {
-        query: query.trim(),
-        limit: 5,
-      });
+      const response = await axios.post(
+        `${API_URL}/ai/recommend`,
+        {
+          query: query.trim(),
+          limit: 5,
+        }
+      );
 
-      console.log("Search response:", response.data);
+      console.log("AI recommendation response:", response.data);
 
-      setStudents(response.data.results || []);
+      setStudents(response.data.profiles || []);
+      setRecommendation(response.data.recommendation || "");
     } catch (error) {
-      console.error("Search error:", error);
+      console.error("AI search error:", error);
 
       if (axios.isAxiosError(error)) {
         console.error("Status:", error.response?.status);
@@ -55,11 +62,11 @@ function Discover() {
 
         alert(
           error.response?.data?.detail ||
-            "Unable to search students. Server returned an error."
+            "Unable to get AI recommendations. Server returned an error."
         );
       } else {
         alert(
-          "Unable to search students. Make sure the backend is running."
+          "Unable to get AI recommendations. Make sure the backend is running."
         );
       }
     } finally {
@@ -98,11 +105,12 @@ function Discover() {
       <Navbar />
 
       <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+
         {/* HEADER */}
 
         <div>
           <p className="text-sm font-medium text-slate-500">
-            Talent discovery
+            AI-powered talent discovery
           </p>
 
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
@@ -111,7 +119,7 @@ function Discover() {
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
             Find students based on their skills, interests, projects,
-            and experience.
+            and experience using AI-powered semantic search.
           </p>
         </div>
 
@@ -146,7 +154,7 @@ function Discover() {
               disabled={loading}
               className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading ? "Searching..." : "Search"}
+              {loading ? "Finding..." : "✨ AI Search"}
             </button>
           </div>
 
@@ -160,10 +168,36 @@ function Discover() {
 
         {loading && (
           <div className="mt-8 rounded-xl border border-slate-200 bg-white p-8 text-center">
-            <p className="text-sm text-slate-500">
-              Finding suitable students...
+            <p className="text-sm font-medium text-slate-700">
+              AI is finding suitable students...
+            </p>
+
+            <p className="mt-1 text-xs text-slate-400">
+              Searching profiles and generating recommendations.
             </p>
           </div>
+        )}
+
+        {/* AI RECOMMENDATION */}
+
+        {!loading && recommendation && (
+          <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-lg text-white">
+                ✨
+              </div>
+
+              <div>
+                <h2 className="text-lg font-semibold text-slate-950">
+                  AI Recommendation
+                </h2>
+
+                <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600">
+                  {recommendation}
+                </p>
+              </div>
+            </div>
+          </section>
         )}
 
         {/* NO RESULTS */}
@@ -185,6 +219,7 @@ function Discover() {
 
         {!loading && students.length > 0 && (
           <section className="mt-8">
+
             <div>
               <h2 className="text-xl font-semibold text-slate-950">
                 Matching students
@@ -197,6 +232,7 @@ function Discover() {
             </div>
 
             <div className="mt-5 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
               {students.map((student) => {
                 const skills = getSkills(student.skills);
                 const interests = getInterests(student.interests);
@@ -214,8 +250,11 @@ function Discover() {
                     {/* CARD HEADER */}
 
                     <div className="p-6">
+
                       <div className="flex items-start justify-between gap-4">
+
                         <div className="flex min-w-0 items-center gap-4">
+
                           {/* AVATAR */}
 
                           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xl font-semibold text-white">
@@ -227,9 +266,16 @@ function Discover() {
                           {/* BASIC INFO */}
 
                           <div className="min-w-0">
+
                             <h3 className="truncate text-lg font-semibold text-slate-950">
                               {student.name}
                             </h3>
+
+                            {student.institution && (
+                              <p className="mt-1 truncate text-xs font-medium text-slate-500">
+                                {student.institution}
+                              </p>
+                            )}
 
                             {student.degree && (
                               <p className="mt-1 truncate text-sm text-slate-500">
@@ -242,6 +288,7 @@ function Discover() {
                                 {student.year}
                               </p>
                             )}
+
                           </div>
                         </div>
 
@@ -252,12 +299,15 @@ function Discover() {
                             {student.availability}
                           </span>
                         )}
+
                       </div>
 
                       {/* MATCH */}
 
                       <div className="mt-5 rounded-xl bg-slate-50 p-4">
+
                         <div className="flex items-center justify-between">
+
                           <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
                             Match
                           </span>
@@ -265,27 +315,33 @@ function Discover() {
                           <span className="text-sm font-semibold text-slate-900">
                             {matchPercentage.toFixed(1)}%
                           </span>
+
                         </div>
 
                         <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+
                           <div
                             className="h-full rounded-full bg-slate-900 transition-all"
                             style={{
                               width: `${matchPercentage}%`,
                             }}
                           />
+
                         </div>
+
                       </div>
 
                       {/* SKILLS */}
 
                       <div className="mt-5">
+
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                           Skills
                         </p>
 
                         {skills.length > 0 ? (
                           <div className="mt-3 flex flex-wrap gap-2">
+
                             {skills.slice(0, 6).map((skill, index) => (
                               <span
                                 key={`${skill}-${index}`}
@@ -294,23 +350,27 @@ function Discover() {
                                 {skill}
                               </span>
                             ))}
+
                           </div>
                         ) : (
                           <p className="mt-2 text-sm text-slate-500">
                             No skills listed.
                           </p>
                         )}
+
                       </div>
 
                       {/* INTERESTS */}
 
                       {interests.length > 0 && (
                         <div className="mt-5">
+
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                             Interests
                           </p>
 
                           <div className="mt-3 flex flex-wrap gap-2">
+
                             {interests.slice(0, 4).map((interest, index) => (
                               <span
                                 key={`${interest}-${index}`}
@@ -319,7 +379,9 @@ function Discover() {
                                 {interest}
                               </span>
                             ))}
+
                           </div>
+
                         </div>
                       )}
 
@@ -339,13 +401,16 @@ function Discover() {
                       >
                         View full profile
                       </Link>
+
                     </div>
                   </article>
                 );
               })}
+
             </div>
           </section>
         )}
+
       </main>
 
       <Footer />
