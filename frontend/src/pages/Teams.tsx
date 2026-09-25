@@ -28,13 +28,12 @@ function Teams() {
 
   const [loading, setLoading] = useState(false);
 
+  // Get the same token that Login.tsx stores
   const getToken = () => {
-    return (
-      localStorage.getItem("talentos_token") ||
-      localStorage.getItem("access_token")
-    );
+    return localStorage.getItem("talentos_access_token");
   };
 
+  // Authentication configuration for protected API requests
   const getAuthConfig = () => {
     const token = getToken();
 
@@ -45,6 +44,7 @@ function Teams() {
     };
   };
 
+  // Fetch all teams
   const fetchTeams = async () => {
     try {
       const response = await axios.get(
@@ -60,6 +60,7 @@ function Teams() {
           "Status:",
           error.response?.status
         );
+
         console.error(
           "Response:",
           error.response?.data
@@ -72,6 +73,7 @@ function Teams() {
     fetchTeams();
   }, []);
 
+  // Create team
   const handleCreateTeam = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
@@ -152,6 +154,7 @@ function Teams() {
     }
   };
 
+  // Delete team
   const handleDeleteTeam = async (
     teamId: number
   ) => {
@@ -200,6 +203,8 @@ function Teams() {
               "Failed to delete team."
           );
         }
+      } else {
+        alert("Failed to delete team.");
       }
     }
   };
@@ -225,7 +230,6 @@ function Teams() {
             Create and manage teams for your projects.
           </p>
         </div>
-
 
         {/* CREATE TEAM */}
 
@@ -256,7 +260,6 @@ function Teams() {
               />
             </div>
 
-
             <div>
               <label className="text-sm font-medium text-slate-900">
                 Project
@@ -273,7 +276,6 @@ function Teams() {
               />
             </div>
 
-
             <button
               type="submit"
               disabled={loading}
@@ -287,7 +289,6 @@ function Teams() {
           </form>
 
         </section>
-
 
         {/* TEAMS */}
 
@@ -306,7 +307,6 @@ function Teams() {
             </div>
 
           </div>
-
 
           {teams.length === 0 ? (
 
@@ -358,7 +358,6 @@ function Teams() {
                     </button>
 
                   </div>
-
 
                   <div className="mt-5">
 
