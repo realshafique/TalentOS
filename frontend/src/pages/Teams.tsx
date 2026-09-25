@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+
+import API_URL from "../config";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
 
 type TeamMember = {
   id: number;
@@ -19,31 +22,49 @@ type Team = {
 
 function Teams() {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [removingMemberId, setRemovingMemberId] = useState<number | null>(
-    null
-  );
-  const [removingTeamId, setRemovingTeamId] = useState<number | null>(null);
 
-  const [showCreateForm, setShowCreateForm] = useState(false);
   const [teamName, setTeamName] = useState("");
-  const [teamProject, setTeamProject] = useState("");
-  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [projectName, setProjectName] = useState("");
+
+  const [loading, setLoading] = useState(false);
+
+  const getToken = () => {
+    return (
+      localStorage.getItem("talentos_token") ||
+      localStorage.getItem("access_token")
+    );
+  };
+
+  const getAuthConfig = () => {
+    const token = getToken();
+
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    };
+  };
 
   const fetchTeams = async () => {
     try {
-      setLoading(true);
-
       const response = await axios.get(
-        "https://talentos-c2kd.onrender.com/teams"
+        `${API_URL}/teams`
       );
 
-      setTeams(response.data);
+      setTeams(response.data || []);
     } catch (error) {
-      console.error(error);
-      alert("Unable to load teams.");
-    } finally {
-      setLoading(false);
+      console.error("Failed to fetch teams:", error);
+
+      if (axios.isAxiosError(error)) {
+        console.error(
+          "Status:",
+          error.response?.status
+        );
+        console.error(
+          "Response:",
+          error.response?.data
+        );
+      }
     }
   };
 
@@ -51,48 +72,98 @@ function Teams() {
     fetchTeams();
   }, []);
 
-  const createTeam = async () => {
+  const handleCreateTeam = async (
+    event: React.FormEvent<HTMLFormElement>
+  ) => {
+    event.preventDefault();
+
     if (!teamName.trim()) {
       alert("Please enter a team name.");
       return;
     }
 
-    if (!teamProject.trim()) {
+    if (!projectName.trim()) {
       alert("Please enter a project name.");
       return;
     }
 
-    try {
-      setCreatingTeam(true);
+    const token = getToken();
 
-      await axios.post(
-        "https://talentos-c2kd.onrender.com/teams",
+    if (!token) {
+      alert("Please login before creating a team.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const response = await axios.post(
+        `${API_URL}/teams`,
         {
           name: teamName.trim(),
-          project: teamProject.trim(),
-        }
+          project: projectName.trim(),
+        },
+        getAuthConfig()
       );
+
+      console.log(
+        "Team created:",
+        response.data
+      );
+
+      alert("Team created successfully!");
 
       setTeamName("");
-      setTeamProject("");
-      setShowCreateForm(false);
+      setProjectName("");
 
       await fetchTeams();
     } catch (error) {
-      console.error(error);
-      alert("Unable to create team.");
+      console.error(
+        "Failed to create team:",
+        error
+      );
+
+      if (axios.isAxiosError(error)) {
+        console.error(
+          "Status:",
+          error.response?.status
+        );
+
+        console.error(
+          "Response:",
+          error.response?.data
+        );
+
+        if (error.response?.status === 401) {
+          alert(
+            "Your login session has expired. Please login again."
+          );
+        } else {
+          alert(
+            error.response?.data?.detail ||
+              "Failed to create team."
+          );
+        }
+      } else {
+        alert("Failed to create team.");
+      }
     } finally {
-      setCreatingTeam(false);
+      setLoading(false);
     }
   };
 
-  const removeMember = async (
-    teamId: number,
-    memberId: number,
-    memberName: string
+  const handleDeleteTeam = async (
+    teamId: number
   ) => {
+    const token = getToken();
+
+    if (!token) {
+      alert("Please login before deleting a team.");
+      return;
+    }
+
     const confirmed = window.confirm(
-      `Remove ${memberName} from this team?`
+      "Are you sure you want to delete this team?"
     );
 
     if (!confirmed) {
@@ -100,292 +171,258 @@ function Teams() {
     }
 
     try {
-      setRemovingMemberId(memberId);
-
       await axios.delete(
-        `https://talentos-c2kd.onrender.com/teams/${teamId}/members/${memberId}`
+        `${API_URL}/teams/${teamId}`,
+        getAuthConfig()
       );
 
-      await fetchTeams();
-    } catch (error) {
-      console.error(error);
-      alert("Unable to remove team member.");
-    } finally {
-      setRemovingMemberId(null);
-    }
-  };
-
-  const removeTeam = async (
-    teamId: number,
-    teamName: string
-  ) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${teamName}"? This will also remove all team members.`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      setRemovingTeamId(teamId);
-
-      await axios.delete(
-        `https://talentos-c2kd.onrender.com/teams/${teamId}`
+      setTeams((previousTeams) =>
+        previousTeams.filter(
+          (team) => team.id !== teamId
+        )
       );
 
-      await fetchTeams();
+      alert("Team deleted successfully.");
     } catch (error) {
-      console.error(error);
-      alert("Unable to delete team.");
-    } finally {
-      setRemovingTeamId(null);
+      console.error(
+        "Failed to delete team:",
+        error
+      );
+
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          alert(
+            "Your login session has expired. Please login again."
+          );
+        } else {
+          alert(
+            error.response?.data?.detail ||
+              "Failed to delete team."
+          );
+        }
+      }
     }
   };
-
-  if (loading) {
-    return (
-      <main className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
-        <p className="text-sm text-slate-500">
-          Loading teams...
-        </p>
-      </main>
-    );
-  }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="min-h-screen bg-slate-50">
+      <Navbar />
+
+      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+
+        {/* HEADER */}
+
         <div>
           <p className="text-sm font-medium text-slate-500">
-            Team formation
+            TalentOS
           </p>
 
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-950">
-            Your Teams
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+            Teams
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-            Manage your project teams and the students working with you.
+            Create and manage teams for your projects.
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/discover"
-            className="inline-flex w-fit rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-          >
-            Discover students
-          </Link>
 
-          <button
-            type="button"
-            onClick={() => setShowCreateForm(!showCreateForm)}
-            className="inline-flex w-fit rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800"
-          >
-            {showCreateForm ? "Cancel" : "Create team"}
-          </button>
-        </div>
-      </div>
+        {/* CREATE TEAM */}
 
-      {/* Create team form */}
-      {showCreateForm && (
-        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
           <h2 className="text-lg font-semibold text-slate-950">
-            Create a new team
+            Create a Team
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
-            Create your team first, then add students from Discover.
-          </p>
+          <form
+            onSubmit={handleCreateTeam}
+            className="mt-5 space-y-5"
+          >
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-slate-700">
-                Team name
+              <label className="text-sm font-medium text-slate-900">
+                Team Name
               </label>
 
               <input
                 type="text"
                 value={teamName}
-                onChange={(event) => setTeamName(event.target.value)}
+                onChange={(event) =>
+                  setTeamName(event.target.value)
+                }
                 placeholder="e.g. AI Innovators"
-                className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-slate-400"
+                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
               />
             </div>
 
+
             <div>
-              <label className="text-sm font-medium text-slate-700">
+              <label className="text-sm font-medium text-slate-900">
                 Project
               </label>
 
               <input
                 type="text"
-                value={teamProject}
-                onChange={(event) => setTeamProject(event.target.value)}
+                value={projectName}
+                onChange={(event) =>
+                  setProjectName(event.target.value)
+                }
                 placeholder="e.g. Smart Campus AI"
-                className="mt-2 w-full rounded-lg border border-slate-200 px-4 py-2.5 text-sm outline-none transition focus:border-slate-400"
+                className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
               />
             </div>
+
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading
+                ? "Creating..."
+                : "Create Team"}
+            </button>
+
+          </form>
+
+        </section>
+
+
+        {/* TEAMS */}
+
+        <section className="mt-8">
+
+          <div className="flex items-center justify-between">
+
+            <div>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Your Teams
+              </h2>
+
+              <p className="mt-1 text-sm text-slate-500">
+                Teams currently available on TalentOS.
+              </p>
+            </div>
+
           </div>
 
-          <button
-            type="button"
-            onClick={createTeam}
-            disabled={creatingTeam}
-            className="mt-5 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {creatingTeam ? "Creating..." : "Create team"}
-          </button>
-        </div>
-      )}
 
-      {/* No teams */}
-      {teams.length === 0 ? (
-        <div className="mt-10 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-          <h2 className="text-lg font-semibold text-slate-900">
-            No teams yet
-          </h2>
+          {teams.length === 0 ? (
 
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-            Create a team first, then discover students and add them
-            to your project.
-          </p>
+            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-8 text-center">
 
-          <button
-            type="button"
-            onClick={() => setShowCreateForm(true)}
-            className="mt-6 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
-          >
-            Create your first team
-          </button>
-        </div>
-      ) : (
-        <div className="mt-10 grid gap-6 lg:grid-cols-2">
-          {teams.map((team) => (
-            <section
-              key={team.id}
-              className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-            >
-              {/* Team header */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <h2 className="text-xl font-semibold text-slate-950">
-                    {team.name}
-                  </h2>
+              <h3 className="font-semibold text-slate-950">
+                No teams yet
+              </h3>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    {team.project}
-                  </p>
-                </div>
+              <p className="mt-2 text-sm text-slate-500">
+                Create your first team above.
+              </p>
 
-                <div className="flex shrink-0 flex-col items-end gap-2">
-                  <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                    {team.members.length}{" "}
-                    {team.members.length === 1
-                      ? "member"
-                      : "members"}
+            </div>
+
+          ) : (
+
+            <div className="mt-5 grid gap-5 md:grid-cols-2">
+
+              {teams.map((team) => (
+
+                <article
+                  key={team.id}
+                  className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                >
+
+                  <div className="flex items-start justify-between gap-4">
+
+                    <div>
+
+                      <h3 className="text-lg font-semibold text-slate-950">
+                        {team.name}
+                      </h3>
+
+                      <p className="mt-1 text-sm text-slate-500">
+                        {team.project}
+                      </p>
+
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleDeleteTeam(team.id)
+                      }
+                      className="text-sm font-medium text-red-500 hover:text-red-700"
+                    >
+                      Delete
+                    </button>
+
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      removeTeam(team.id, team.name)
-                    }
-                    disabled={removingTeamId === team.id}
-                    className="rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {removingTeamId === team.id
-                      ? "Removing..."
-                      : "Remove team"}
-                  </button>
-                </div>
-              </div>
 
-              {/* Members */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-slate-900">
-                    Team members
-                  </h3>
+                  <div className="mt-5">
 
-                  <Link
-                    to="/discover"
-                    className="text-xs font-medium text-slate-600 hover:text-slate-950"
-                  >
-                    Add members
-                  </Link>
-                </div>
-
-                {team.members.length === 0 ? (
-                  <div className="mt-4 rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
-                    <p className="text-sm text-slate-500">
-                      No members added yet.
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                      Members
                     </p>
 
-                    <Link
-                      to="/discover"
-                      className="mt-2 inline-block text-sm font-medium text-slate-900 hover:underline"
-                    >
-                      Find students
-                    </Link>
-                  </div>
-                ) : (
-                  <div className="mt-4 space-y-3">
-                    {team.members.map((member) => (
-                      <div
-                        key={member.id}
-                        className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 p-4"
-                      >
-                        <div className="min-w-0">
-                          <Link
-                            to={`/student/${member.profile_id}`}
-                            className="font-medium text-slate-900 hover:underline"
-                          >
-                            {member.name}
-                          </Link>
+                    {team.members.length === 0 ? (
 
-                          <p className="mt-1 text-xs text-slate-500">
-                            {member.degree}
-                          </p>
+                      <p className="mt-3 text-sm text-slate-500">
+                        No members added yet.
+                      </p>
 
-                          <p className="mt-2 text-xs text-slate-600">
-                            Role:{" "}
-                            <span className="font-medium text-slate-900">
-                              {member.role}
-                            </span>
-                          </p>
-                        </div>
+                    ) : (
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            removeMember(
-                              team.id,
-                              member.id,
-                              member.name
-                            )
-                          }
-                          disabled={
-                            removingMemberId === member.id
-                          }
-                          className="shrink-0 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 transition hover:border-slate-300 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                          {removingMemberId === member.id
-                            ? "Removing..."
-                            : "Remove"}
-                        </button>
+                      <div className="mt-3 space-y-2">
+
+                        {team.members.map(
+                          (member) => (
+
+                            <div
+                              key={member.id}
+                              className="rounded-lg bg-slate-50 px-4 py-3"
+                            >
+
+                              <p className="text-sm font-medium text-slate-900">
+                                {member.name}
+                              </p>
+
+                              <p className="mt-1 text-xs text-slate-500">
+                                {member.degree}
+                              </p>
+
+                              {member.role && (
+                                <p className="mt-1 text-xs text-slate-400">
+                                  {member.role}
+                                </p>
+                              )}
+
+                            </div>
+
+                          )
+                        )}
+
                       </div>
-                    ))}
+
+                    )}
+
                   </div>
-                )}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
-    </main>
+
+                </article>
+
+              ))}
+
+            </div>
+
+          )}
+
+        </section>
+
+      </main>
+
+      <Footer />
+    </div>
   );
 }
 
