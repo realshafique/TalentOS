@@ -17,6 +17,7 @@ type Profile = {
   name: string;
   email: string;
   phone: string;
+  institution: string;
   degree: string;
   year: string;
   about: string;
@@ -30,6 +31,7 @@ const emptyProfile: Profile = {
   name: "",
   email: "",
   phone: "",
+  institution: "",
   degree: "",
   year: "",
   about: "",
@@ -100,6 +102,7 @@ function CreateProfile() {
             name: existingProfile.name || "",
             email: existingProfile.email || "",
             phone: existingProfile.phone || "",
+            institution: existingProfile.institution || "",
             degree: existingProfile.degree || "",
             year: existingProfile.year || "",
             about: existingProfile.about || "",
@@ -282,6 +285,11 @@ function CreateProfile() {
       return;
     }
 
+    if (!profile.institution.trim()) {
+      alert("Please select your university or college.");
+      return;
+    }
+
     if (!profile.degree.trim()) {
       alert("Please enter your degree.");
       return;
@@ -436,6 +444,31 @@ function CreateProfile() {
                   placeholder="Enter your name"
                   className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                 />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="institution"
+                  className="text-sm font-medium text-slate-900"
+                >
+                  University / College
+                </label>
+
+                <select
+                  id="institution"
+                  name="institution"
+                  value={profile.institution}
+                  onChange={handleChange}
+                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
+                >
+                  <option value="">Select your university / college</option>
+                  <option value="BBD University">BBD University</option>
+                  <option value="University of Lucknow">University of Lucknow</option>
+                  <option value="Dr. A.P.J. Abdul Kalam Technical University">Dr. A.P.J. Abdul Kalam Technical University</option>
+                  <option value="Integral University">Integral University</option>
+                  <option value="Amity University Lucknow">Amity University Lucknow</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
 
               <div>
