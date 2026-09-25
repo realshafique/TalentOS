@@ -31,6 +31,10 @@ class ProfileCreate(BaseModel):
     name: str
     email: EmailStr
     phone: str | None = None
+
+    # University / College
+    institution: str | None = None
+
     degree: str
     year: str
     about: str

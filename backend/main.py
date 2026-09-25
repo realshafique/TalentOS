@@ -300,6 +300,7 @@ def create_profile(
         name=profile.name,
         email=profile.email,
         phone=profile.phone,
+        institution=profile.institution,
         degree=profile.degree,
         year=profile.year,
         about=profile.about,
@@ -334,6 +335,7 @@ def create_profile(
             "name": new_profile.name,
             "email": new_profile.email,
             "phone": new_profile.phone,
+            "institution": new_profile.institution,
             "degree": new_profile.degree,
             "year": new_profile.year,
             "skills": profile.skills,
@@ -355,6 +357,7 @@ def create_profile(
             "name": new_profile.name,
             "email": new_profile.email,
             "phone": new_profile.phone,
+            "institution": new_profile.institution,
             "degree": new_profile.degree,
             "year": new_profile.year,
             "about": new_profile.about,
@@ -390,6 +393,7 @@ def get_profiles(
             "name": profile.name,
             "email": profile.email,
             "phone": profile.phone,
+            "institution": profile.institution,
             "degree": profile.degree,
             "year": profile.year,
             "about": profile.about,
@@ -450,6 +454,7 @@ def update_profile(
     existing_profile.name = profile.name
     existing_profile.email = profile.email
     existing_profile.phone = profile.phone
+    existing_profile.institution = profile.institution
     existing_profile.degree = profile.degree
     existing_profile.year = profile.year
     existing_profile.about = profile.about
@@ -485,6 +490,7 @@ def update_profile(
             "name": existing_profile.name,
             "email": existing_profile.email,
             "phone": existing_profile.phone,
+            "institution": existing_profile.institution,
             "degree": existing_profile.degree,
             "year": existing_profile.year,
             "skills": profile.skills,
@@ -506,6 +512,7 @@ def update_profile(
             "name": existing_profile.name,
             "email": existing_profile.email,
             "phone": existing_profile.phone,
+            "institution": existing_profile.institution,
             "degree": existing_profile.degree,
             "year": existing_profile.year,
             "about": existing_profile.about,
@@ -760,6 +767,7 @@ def search_profiles(
                 "name": point.payload.get("name"),
                 "email": point.payload.get("email"),
                 "phone": point.payload.get("phone"),
+                "institution": point.payload.get("institution"),
                 "degree": point.payload.get("degree"),
                 "year": point.payload.get("year"),
                 "skills": point.payload.get("skills", []),

@@ -16,6 +16,9 @@ Technologies: {project.technologies}
     profile_text = f"""
 Name: {profile.name}
 
+Institution:
+{profile.institution or "Not specified"}
+
 Degree:
 {profile.degree}
 

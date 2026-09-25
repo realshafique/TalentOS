@@ -59,8 +59,8 @@ class Profile(Base):
     )
 
     # Links a profile to its authenticated account.
-    # Nullable because your existing 14 profiles
-    # don't have accounts yet.
+    # Nullable because existing profiles may not
+    # have authenticated accounts yet.
     user_id = Column(
         Integer,
         ForeignKey("users.id"),
@@ -81,6 +81,15 @@ class Profile(Base):
 
     phone = Column(
         String(20),
+        nullable=True
+    )
+
+    # ==================================================
+    # UNIVERSITY / COLLEGE
+    # ==================================================
+
+    institution = Column(
+        String(250),
         nullable=True
     )
 
