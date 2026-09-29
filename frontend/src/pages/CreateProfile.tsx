@@ -1,156 +1,145 @@
-import API_URL from "../config";
 import { useEffect, useState } from "react";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
-
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import axios from "axios";
+import API_URL from "../api";
 
 type Project = {
-  id: number;
+  id?: number;
   name: string;
   description: string;
   technologies: string;
 };
 
-type Profile = {
+type ProfileForm = {
   name: string;
   email: string;
   phone: string;
-  institution: string;
   degree: string;
   year: string;
   about: string;
   skills: string[];
   interests: string[];
-  projects: Project[];
   availability: string;
+  projects: Project[];
 };
 
-const emptyProfile: Profile = {
+const emptyProject: Project = {
+  name: "",
+  description: "",
+  technologies: "",
+};
+
+const emptyForm: ProfileForm = {
   name: "",
   email: "",
   phone: "",
-  institution: "",
   degree: "",
   year: "",
   about: "",
   skills: [],
   interests: [],
-  projects: [
-    {
-      id: 1,
-      name: "",
-      description: "",
-      technologies: "",
-    },
-  ],
   availability: "Available",
+  projects: [],
 };
 
 function CreateProfile() {
   const navigate = useNavigate();
 
-  const [profile, setProfile] = useState<Profile>(emptyProfile);
+  const [form, setForm] = useState<ProfileForm>(emptyForm);
 
   const [profileId, setProfileId] = useState<number | null>(null);
+
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const [skillInput, setSkillInput] = useState("");
   const [interestInput, setInterestInput] = useState("");
 
-  const [loading, setLoading] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [isEditing, setIsEditing] = useState(false);
-
+  /*
+   * IMPORTANT:
+   *
+   * We DO NOT call GET /profiles here.
+   *
+   * The form appears immediately.
+   *
+   * If a profile ID exists in localStorage,
+   * we fetch ONLY that profile.
+   */
   useEffect(() => {
-    const token = localStorage.getItem("talentos_access_token");
+    const savedProfileId = localStorage.getItem("talentos_profile_id");
 
-    if (!token) {
-      navigate("/login");
+    if (!savedProfileId) {
       return;
     }
 
-    const fetchProfile = async () => {
+    const id = Number(savedProfileId);
+
+    if (!Number.isInteger(id)) {
+      return;
+    }
+
+    setProfileId(id);
+
+    const loadExistingProfile = async () => {
       try {
-        const authHeaders = {
-          Authorization: `Bearer ${token}`,
-        };
+        setLoadingProfile(true);
 
-        const meResponse = await axios.get(
-          `${API_URL}/auth/me`,
-          { headers: authHeaders }
+        const response = await axios.get(
+          `${API_URL}/profiles/${id}`
         );
 
-        const currentUser = meResponse.data;
+        const profile = response.data;
 
-        if (!currentUser.profile_id) {
-          setLoadingProfile(false);
-          return;
-        }
+        setForm({
+          name: profile.name || "",
+          email: profile.email || "",
+          phone: profile.phone || "",
+          degree: profile.degree || "",
+          year: profile.year || "",
+          about: profile.about || "",
+          skills: Array.isArray(profile.skills)
+            ? profile.skills
+            : [],
+          interests: Array.isArray(profile.interests)
+            ? profile.interests
+            : [],
+          availability: profile.availability || "Available",
+          projects: Array.isArray(profile.projects)
+            ? profile.projects.map((project: Project) => ({
+                id: project.id,
+                name: project.name || "",
+                description: project.description || "",
+                technologies: project.technologies || "",
+              }))
+            : [],
+        });
+      } catch (err) {
+        console.error("Unable to load profile:", err);
 
-        const id = Number(currentUser.profile_id);
-        setProfileId(id);
-
-        const response = await axios.get(`${API_URL}/profiles`);
-        const existingProfile = response.data.find(
-          (item: any) => item.id === id
-        );
-
-        if (existingProfile) {
-          setProfile({
-            name: existingProfile.name || "",
-            email: existingProfile.email || "",
-            phone: existingProfile.phone || "",
-            institution: existingProfile.institution || "",
-            degree: existingProfile.degree || "",
-            year: existingProfile.year || "",
-            about: existingProfile.about || "",
-            skills: Array.isArray(existingProfile.skills)
-              ? existingProfile.skills
-              : existingProfile.skills
-                ? existingProfile.skills.split(",").map((skill: string) => skill.trim()).filter(Boolean)
-                : [],
-            interests: Array.isArray(existingProfile.interests)
-              ? existingProfile.interests
-              : existingProfile.interests
-                ? existingProfile.interests.split(",").map((interest: string) => interest.trim()).filter(Boolean)
-                : [],
-            projects:
-              existingProfile.projects && existingProfile.projects.length > 0
-                ? existingProfile.projects
-                : [{ id: Date.now(), name: "", description: "", technologies: "" }],
-            availability: existingProfile.availability || "Available",
-          });
-
-          setIsEditing(true);
-        }
-      } catch (error) {
-        console.error("Failed to load profile:", error);
-
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
-          localStorage.removeItem("talentos_access_token");
-          navigate("/login");
-          return;
-        }
+        /*
+         * If the saved ID is invalid or the profile was deleted,
+         * simply start with an empty form.
+         */
+        localStorage.removeItem("talentos_profile_id");
+        setProfileId(null);
       } finally {
         setLoadingProfile(false);
       }
     };
 
-    fetchProfile();
-  }, [navigate]);
+    loadExistingProfile();
+  }, []);
 
-  const handleChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+  const updateField = (
+    field: keyof ProfileForm,
+    value: string
   ) => {
-    const { name, value } = event.target;
-
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      [name]: value,
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
     }));
   };
 
@@ -161,28 +150,28 @@ function CreateProfile() {
       return;
     }
 
-    const alreadyExists = profile.skills.some(
-      (existingSkill) =>
-        existingSkill.toLowerCase() === skill.toLowerCase()
-    );
-
-    if (alreadyExists) {
+    if (
+      form.skills.some(
+        (existing) =>
+          existing.toLowerCase() === skill.toLowerCase()
+      )
+    ) {
       setSkillInput("");
       return;
     }
 
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      skills: [...previousProfile.skills, skill],
+    setForm((previous) => ({
+      ...previous,
+      skills: [...previous.skills, skill],
     }));
 
     setSkillInput("");
   };
 
   const removeSkill = (skillToRemove: string) => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      skills: previousProfile.skills.filter(
+    setForm((previous) => ({
+      ...previous,
+      skills: previous.skills.filter(
         (skill) => skill !== skillToRemove
       ),
     }));
@@ -195,43 +184,54 @@ function CreateProfile() {
       return;
     }
 
-    const alreadyExists = profile.interests.some(
-      (existingInterest) =>
-        existingInterest.toLowerCase() ===
-        interest.toLowerCase()
-    );
-
-    if (alreadyExists) {
+    if (
+      form.interests.some(
+        (existing) =>
+          existing.toLowerCase() === interest.toLowerCase()
+      )
+    ) {
       setInterestInput("");
       return;
     }
 
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      interests: [...previousProfile.interests, interest],
+    setForm((previous) => ({
+      ...previous,
+      interests: [...previous.interests, interest],
     }));
 
     setInterestInput("");
   };
 
   const removeInterest = (interestToRemove: string) => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      interests: previousProfile.interests.filter(
+    setForm((previous) => ({
+      ...previous,
+      interests: previous.interests.filter(
         (interest) => interest !== interestToRemove
       ),
     }));
   };
 
-  const handleProjectChange = (
-    id: number,
+  const addProject = () => {
+    setForm((previous) => ({
+      ...previous,
+      projects: [
+        ...previous.projects,
+        {
+          ...emptyProject,
+        },
+      ],
+    }));
+  };
+
+  const updateProject = (
+    index: number,
     field: keyof Project,
     value: string
   ) => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      projects: previousProfile.projects.map((project) =>
-        project.id === id
+    setForm((previous) => ({
+      ...previous,
+      projects: previous.projects.map((project, projectIndex) =>
+        projectIndex === index
           ? {
               ...project,
               [field]: value,
@@ -241,461 +241,411 @@ function CreateProfile() {
     }));
   };
 
-  const addProject = () => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      projects: [
-        ...previousProfile.projects,
-        {
-          id: Date.now(),
-          name: "",
-          description: "",
-          technologies: "",
-        },
-      ],
-    }));
-  };
-
-  const removeProject = (id: number) => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      projects: previousProfile.projects.filter(
-        (project) => project.id !== id
+  const removeProject = (index: number) => {
+    setForm((previous) => ({
+      ...previous,
+      projects: previous.projects.filter(
+        (_, projectIndex) => projectIndex !== index
       ),
     }));
   };
 
+  const validateForm = () => {
+    if (!form.name.trim()) {
+      return "Name is required.";
+    }
+
+    if (!form.email.trim()) {
+      return "Email is required.";
+    }
+
+    if (!form.degree.trim()) {
+      return "Degree is required.";
+    }
+
+    if (!form.year.trim()) {
+      return "Year is required.";
+    }
+
+    return "";
+  };
+
   const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
+    event: React.FormEvent
   ) => {
     event.preventDefault();
 
-    if (!profile.name.trim()) {
-      alert("Please enter your name.");
+    setError("");
+    setSuccess("");
+
+    const validationError = validateForm();
+
+    if (validationError) {
+      setError(validationError);
       return;
     }
 
-    if (!profile.email.trim()) {
-      alert("Please enter your email.");
-      return;
-    }
+    setSaving(true);
 
-    if (!profile.phone.trim()) {
-      alert("Please enter your phone number.");
-      return;
-    }
-
-    if (!profile.institution.trim()) {
-      alert("Please select your university or college.");
-      return;
-    }
-
-    if (!profile.degree.trim()) {
-      alert("Please enter your degree.");
-      return;
-    }
-
-    if (!profile.year.trim()) {
-      alert("Please select your year.");
-      return;
-    }
-
-    if (profile.skills.length === 0) {
-      alert("Please add at least one skill.");
-      return;
-    }
+    const payload = {
+      name: form.name.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      degree: form.degree.trim(),
+      year: form.year.trim(),
+      about: form.about.trim(),
+      skills: form.skills,
+      interests: form.interests,
+      availability: form.availability,
+      projects: form.projects
+        .filter(
+          (project) =>
+            project.name.trim() ||
+            project.description.trim() ||
+            project.technologies.trim()
+        )
+        .map((project) => ({
+          name: project.name.trim(),
+          description: project.description.trim(),
+          technologies: project.technologies.trim(),
+        })),
+    };
 
     try {
-      setLoading(true);
-
-      const token = localStorage.getItem("talentos_access_token");
-
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      const authHeaders = {
-        Authorization: `Bearer ${token}`,
-      };
-
       let response;
 
-      if (isEditing && profileId) {
+      /*
+       * Existing profile
+       */
+      if (profileId) {
         response = await axios.put(
           `${API_URL}/profiles/${profileId}`,
-          profile,
-          { headers: authHeaders }
+          payload
         );
-        alert("Profile updated successfully!");
-      } else {
+
+        setSuccess("Profile updated successfully.");
+      }
+
+      /*
+       * New profile
+       */
+      else {
         response = await axios.post(
           `${API_URL}/profiles`,
-          profile,
-          { headers: authHeaders }
+          payload
         );
 
-        const newProfileId = response.data.profile.id;
+        const newProfileId = response.data.id;
+
+        localStorage.setItem(
+          "talentos_profile_id",
+          String(newProfileId)
+        );
+
         setProfileId(newProfileId);
-        setIsEditing(true);
-        alert("Profile created successfully!");
+
+        setSuccess("Profile created successfully.");
       }
 
-      console.log(response.data);
-    } catch (error) {
-      console.error("Profile request failed:", error);
+      /*
+       * Give the user a moment to see success,
+       * then go to Profile.
+       */
+      setTimeout(() => {
+        navigate("/profile");
+      }, 500);
+    } catch (err: any) {
+      console.error("Profile save error:", err);
 
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        localStorage.removeItem("talentos_access_token");
-        navigate("/login");
-        return;
-      }
+      const message =
+        err?.response?.data?.detail ||
+        "Unable to save profile. Please try again.";
 
-      if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail;
-
-        if (Array.isArray(detail)) {
-          const messages = detail
-            .map((item: any) => {
-              const field = Array.isArray(item.loc) ? item.loc.join(".") : "field";
-              return `${field}: ${item.msg}`;
-            })
-            .join("\n");
-          alert(messages);
-        } else if (detail) {
-          alert(detail);
-        } else {
-          alert(isEditing ? "Failed to update profile." : "Failed to create profile.");
-        }
-      } else {
-        alert("Something went wrong.");
-      }
+      setError(message);
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  if (loadingProfile) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar />
-
-        <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-            <p className="text-sm text-slate-500">
-              Loading profile...
-            </p>
-          </div>
-        </main>
-
-        <Footer />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
 
-      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-        <div className="max-w-2xl">
-          <p className="text-sm font-medium text-slate-500">
+        {/* Header */}
+        <div className="mb-8">
+          <p className="text-sm font-semibold text-blue-600">
             TalentOS
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-            {isEditing
-              ? "Update your profile"
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+            {profileId
+              ? "Edit your profile"
               : "Create your profile"}
           </h1>
 
-          <p className="mt-4 leading-7 text-slate-600">
-            Tell other students about your skills, interests and
-            projects so TalentOS can help find relevant teammates.
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            Add your skills, interests and projects so TalentOS
+            can help you discover relevant teammates.
           </p>
         </div>
 
+        {/* Loading existing profile */}
+        {loadingProfile && (
+          <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Loading your existing profile...
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* Success */}
+        {success && (
+          <div className="mb-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {success}
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
-          className="mt-8 space-y-6"
+          className="space-y-6"
         >
-          {/* BASIC INFORMATION */}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
+          {/* Basic information */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+
             <h2 className="text-lg font-semibold text-slate-950">
-              Basic information
+              Basic Information
             </h2>
 
             <div className="mt-5 grid gap-5 sm:grid-cols-2">
+
               <div>
-                <label
-                  htmlFor="name"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Full name
+                <label className="text-sm font-medium text-slate-700">
+                  Full Name
                 </label>
 
                 <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={profile.name}
-                  onChange={handleChange}
-                  placeholder="Enter your name"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  value={form.name}
+                  onChange={(e) =>
+                    updateField("name", e.target.value)
+                  }
+                  placeholder="Your full name"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label
-                  htmlFor="institution"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  University / College
-                </label>
-
-                <select
-                  id="institution"
-                  name="institution"
-                  value={profile.institution}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
-                >
-                  <option value="">Select your university / college</option>
-                  <option value="BBD University">BBD University</option>
-                  <option value="University of Lucknow">University of Lucknow</option>
-                  <option value="Dr. A.P.J. Abdul Kalam Technical University">Dr. A.P.J. Abdul Kalam Technical University</option>
-                  <option value="Integral University">Integral University</option>
-                  <option value="Amity University Lucknow">Amity University Lucknow</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="degree"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Degree
-                </label>
-
-                <input
-                  id="degree"
-                  name="degree"
-                  type="text"
-                  value={profile.degree}
-                  onChange={handleChange}
-                  placeholder="B.Tech Computer Science - AI"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="year"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Year
-                </label>
-
-                <select
-                  id="year"
-                  name="year"
-                  value={profile.year}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
-                >
-                  <option value="">Select year</option>
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                  <option value="3rd Year">3rd Year</option>
-                  <option value="4th Year">4th Year</option>
-                </select>
-              </div>
-            </div>
-          </section>
-
-          {/* CONTACT INFORMATION */}
-
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Contact information
-            </h2>
-
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="text-sm font-medium text-slate-900"
-                >
+                <label className="text-sm font-medium text-slate-700">
                   Email
                 </label>
 
                 <input
-                  id="email"
-                  name="email"
                   type="email"
-                  value={profile.email}
-                  onChange={handleChange}
+                  value={form.email}
+                  onChange={(e) =>
+                    updateField("email", e.target.value)
+                  }
                   placeholder="you@example.com"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
 
               <div>
-                <label
-                  htmlFor="phone"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Phone number
+                <label className="text-sm font-medium text-slate-700">
+                  Phone
                 </label>
 
                 <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={profile.phone}
-                  onChange={handleChange}
-                  placeholder="+91 9876543210"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  value={form.phone}
+                  onChange={(e) =>
+                    updateField("phone", e.target.value)
+                  }
+                  placeholder="Phone number"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700">
+                  Degree
+                </label>
+
+                <input
+                  value={form.degree}
+                  onChange={(e) =>
+                    updateField("degree", e.target.value)
+                  }
+                  placeholder="B.Tech Computer Science"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700">
+                  Year
+                </label>
+
+                <input
+                  value={form.year}
+                  onChange={(e) =>
+                    updateField("year", e.target.value)
+                  }
+                  placeholder="3rd Year"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-slate-700">
+                  Availability
+                </label>
+
+                <select
+                  value={form.availability}
+                  onChange={(e) =>
+                    updateField(
+                      "availability",
+                      e.target.value
+                    )
+                  }
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="Available">
+                    Available
+                  </option>
+                  <option value="Busy">
+                    Busy
+                  </option>
+                  <option value="Available for projects">
+                    Available for projects
+                  </option>
+                  <option value="Not available">
+                    Not available
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <label className="text-sm font-medium text-slate-700">
+                About
+              </label>
+
+              <textarea
+                value={form.about}
+                onChange={(e) =>
+                  updateField("about", e.target.value)
+                }
+                rows={5}
+                placeholder="Tell others about yourself..."
+                className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
             </div>
           </section>
 
-          {/* ABOUT */}
+          {/* Skills */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              About you
-            </h2>
-
-            <textarea
-              name="about"
-              value={profile.about}
-              onChange={handleChange}
-              rows={5}
-              placeholder="Tell us about yourself, your experience and what you like building..."
-              className="mt-4 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-            />
-          </section>
-
-          {/* SKILLS */}
-
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
             <h2 className="text-lg font-semibold text-slate-950">
               Skills
             </h2>
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-4 flex gap-2">
               <input
-                type="text"
                 value={skillInput}
-                onChange={(event) =>
-                  setSkillInput(event.target.value)
+                onChange={(e) =>
+                  setSkillInput(e.target.value)
                 }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
                     addSkill();
                   }
                 }}
                 placeholder="e.g. Python"
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
 
               <button
                 type="button"
                 onClick={addSkill}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+                className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
               >
-                Add skill
+                Add
               </button>
             </div>
 
-            {profile.skills.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-2">
-                {profile.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
-                  >
-                    {skill}
-
-                    <button
-                      type="button"
-                      onClick={() => removeSkill(skill)}
-                      className="font-medium text-slate-400 hover:text-red-500"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {form.skills.map((skill) => (
+                <button
+                  type="button"
+                  key={skill}
+                  onClick={() => removeSkill(skill)}
+                  className="rounded-full bg-blue-50 px-3 py-1.5 text-sm text-blue-700 hover:bg-blue-100"
+                >
+                  {skill} ×
+                </button>
+              ))}
+            </div>
           </section>
 
-          {/* INTERESTS */}
+          {/* Interests */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
             <h2 className="text-lg font-semibold text-slate-950">
               Interests
             </h2>
 
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-4 flex gap-2">
               <input
-                type="text"
                 value={interestInput}
-                onChange={(event) =>
-                  setInterestInput(event.target.value)
+                onChange={(e) =>
+                  setInterestInput(e.target.value)
                 }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
                     addInterest();
                   }
                 }}
-                placeholder="e.g. Artificial Intelligence"
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                placeholder="e.g. Generative AI"
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
 
               <button
                 type="button"
                 onClick={addInterest}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+                className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
               >
-                Add interest
+                Add
               </button>
             </div>
 
-            {profile.interests.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-2">
-                {profile.interests.map((interest) => (
-                  <span
-                    key={interest}
-                    className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
-                  >
-                    {interest}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeInterest(interest)
-                      }
-                      className="font-medium text-slate-400 hover:text-red-500"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {form.interests.map((interest) => (
+                <button
+                  type="button"
+                  key={interest}
+                  onClick={() =>
+                    removeInterest(interest)
+                  }
+                  className="rounded-full bg-purple-50 px-3 py-1.5 text-sm text-purple-700 hover:bg-purple-100"
+                >
+                  {interest} ×
+                </button>
+              ))}
+            </div>
           </section>
 
-          {/* PROJECTS */}
+          {/* Projects */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-lg font-semibold text-slate-950">
                   Projects
@@ -709,145 +659,114 @@ function CreateProfile() {
               <button
                 type="button"
                 onClick={addProject}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
               >
-                Add project
+                + Add Project
               </button>
             </div>
 
-            <div className="mt-6 space-y-5">
-              {profile.projects.map((project, index) => (
+            <div className="mt-5 space-y-4">
+              {form.projects.length === 0 && (
+                <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-400">
+                  No projects added yet.
+                </div>
+              )}
+
+              {form.projects.map((project, index) => (
                 <div
-                  key={project.id}
-                  className="rounded-lg border border-slate-200 p-5"
+                  key={index}
+                  className="rounded-xl border border-slate-200 p-5"
                 >
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium text-slate-900">
                       Project {index + 1}
                     </h3>
 
-                    {profile.projects.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeProject(project.id)
-                        }
-                        className="text-sm text-red-500 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        removeProject(index)
+                      }
+                      className="text-sm text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
                   </div>
 
                   <div className="mt-4 space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-slate-900">
-                        Project name
-                      </label>
 
-                      <input
-                        type="text"
-                        value={project.name}
-                        onChange={(event) =>
-                          handleProjectChange(
-                            project.id,
-                            "name",
-                            event.target.value
-                          )
-                        }
-                        placeholder="AI Resume Analyzer"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                      />
-                    </div>
+                    <input
+                      value={project.name}
+                      onChange={(e) =>
+                        updateProject(
+                          index,
+                          "name",
+                          e.target.value
+                        )
+                      }
+                      placeholder="Project name"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
 
-                    <div>
-                      <label className="text-sm font-medium text-slate-900">
-                        Description
-                      </label>
+                    <textarea
+                      value={project.description}
+                      onChange={(e) =>
+                        updateProject(
+                          index,
+                          "description",
+                          e.target.value
+                        )
+                      }
+                      rows={3}
+                      placeholder="Project description"
+                      className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
 
-                      <textarea
-                        value={project.description}
-                        onChange={(event) =>
-                          handleProjectChange(
-                            project.id,
-                            "description",
-                            event.target.value
-                          )
-                        }
-                        rows={4}
-                        placeholder="Describe what you built..."
-                        className="mt-2 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-slate-900">
-                        Technologies
-                      </label>
-
-                      <input
-                        type="text"
-                        value={project.technologies}
-                        onChange={(event) =>
-                          handleProjectChange(
-                            project.id,
-                            "technologies",
-                            event.target.value
-                          )
-                        }
-                        placeholder="Python, FastAPI, React"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                      />
-                    </div>
+                    <input
+                      value={project.technologies}
+                      onChange={(e) =>
+                        updateProject(
+                          index,
+                          "technologies",
+                          e.target.value
+                        )
+                      }
+                      placeholder="Technologies: React, FastAPI, PostgreSQL"
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    />
                   </div>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* AVAILABILITY */}
+          {/* Submit */}
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Availability
-            </h2>
-
-            <select
-              name="availability"
-              value={profile.availability}
-              onChange={handleChange}
-              className="mt-4 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
+            <button
+              type="button"
+              onClick={() => navigate("/profile")}
+              className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              <option value="Available">Available</option>
-              <option value="Busy">Busy</option>
-              <option value="Looking for team">
-                Looking for team
-              </option>
-            </select>
-          </section>
+              Cancel
+            </button>
 
-          {/* SUBMIT */}
-
-          <div className="flex justify-end">
             <button
               type="submit"
-              disabled={loading}
-              className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={saving}
+              className="rounded-xl bg-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {loading
-                ? isEditing
-                  ? "Updating profile..."
-                  : "Creating profile..."
-                : isEditing
-                  ? "Update profile"
-                  : "Create profile"}
+              {saving
+                ? "Saving..."
+                : profileId
+                  ? "Update Profile"
+                  : "Create Profile"}
             </button>
+
           </div>
         </form>
-      </main>
-
-      <Footer />
-    </div>
+      </div>
+    </main>
   );
 }
 

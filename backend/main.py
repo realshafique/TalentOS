@@ -383,31 +383,50 @@ def create_profile(
 # GET ALL PROFILES
 # ==========================================
 
-@app.get("/profiles")
-def get_profiles(
-    db: Session = Depends(get_db),
+@app.get("/profiles/{profile_id}")
+def get_profile(
+    profile_id: int,
+    db: Session = Depends(get_db)
 ):
-    profiles = db.query(Profile).all()
+    profile = (
+        db.query(Profile)
+        .filter(Profile.id == profile_id)
+        .first()
+    )
 
-    return [
-        {
-            "id": profile.id,
-            "name": profile.name,
-            "email": profile.email,
-            "phone": profile.phone,
-            "institution": profile.institution,
-            "degree": profile.degree,
-            "year": profile.year,
-            "about": profile.about,
-            "skills": profile.skills,
-            "interests": profile.interests,
-            "availability": profile.availability,
-            "projects": profile.projects,
-        }
-        for profile in profiles
-    ]
+    if not profile:
+        raise HTTPException(
+            status_code=404,
+            detail="Profile not found"
+        )
 
+    projects = (
+        db.query(Project)
+        .filter(Project.profile_id == profile.id)
+        .all()
+    )
 
+    return {
+        "id": profile.id,
+        "name": profile.name,
+        "email": profile.email,
+        "phone": profile.phone,
+        "degree": profile.degree,
+        "year": profile.year,
+        "about": profile.about,
+        "skills": profile.skills.split(",") if profile.skills else [],
+        "interests": profile.interests.split(",") if profile.interests else [],
+        "availability": profile.availability,
+        "projects": [
+            {
+                "id": project.id,
+                "name": project.name,
+                "description": project.description,
+                "technologies": project.technologies
+            }
+            for project in projects
+        ]
+    }
 # ==========================================
 # UPDATE PROFILE
 # ==========================================

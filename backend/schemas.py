@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import List
+from typing import List, Optional
 
 
 # =========================
@@ -7,6 +7,7 @@ from typing import List
 # =========================
 
 class RegisterRequest(BaseModel):
+    name: str
     email: EmailStr
     password: str
 
@@ -17,31 +18,43 @@ class LoginRequest(BaseModel):
 
 
 # =========================
-# PROFILE
+# PROJECT
 # =========================
 
-class Project(BaseModel):
-    id: int
+class ProjectCreate(BaseModel):
     name: str
     description: str
     technologies: str
 
 
+# =========================
+# PROFILE
+# =========================
+
 class ProfileCreate(BaseModel):
     name: str
     email: EmailStr
-    phone: str | None = None
-
-    # University / College
-    institution: str | None = None
-
+    phone: Optional[str] = ""
     degree: str
     year: str
-    about: str
-    skills: List[str]
-    interests: List[str]
-    projects: List[Project]
-    availability: str
+    about: str = ""
+    skills: List[str] = []
+    interests: List[str] = []
+    availability: str = "Available"
+    projects: List[ProjectCreate] = []
+
+
+class ProfileUpdate(BaseModel):
+    name: str
+    email: EmailStr
+    phone: Optional[str] = ""
+    degree: str
+    year: str
+    about: str = ""
+    skills: List[str] = []
+    interests: List[str] = []
+    availability: str = "Available"
+    projects: List[ProjectCreate] = []
 
 
 # =========================
@@ -50,7 +63,7 @@ class ProfileCreate(BaseModel):
 
 class SearchRequest(BaseModel):
     query: str
-    limit: int = 5
+    limit: int = 10
 
 
 # =========================
@@ -64,4 +77,13 @@ class TeamCreate(BaseModel):
 
 class TeamMemberCreate(BaseModel):
     profile_id: int
-    role: str = "Member"
+    role: str = ""
+
+
+# =========================
+# AI TEAM BUILDER
+# =========================
+
+class AIRecommendationRequest(BaseModel):
+    query: str
+    limit: int = 10
