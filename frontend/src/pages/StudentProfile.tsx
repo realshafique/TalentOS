@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-
-import API_URL from "../config";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import API_URL from "../api";
 
 type Project = {
-  id: number;
+  id?: number;
   name: string;
   description: string;
   technologies: string;
@@ -18,20 +15,14 @@ type Student = {
   name: string;
   email: string;
   phone: string | null;
+  institution: string;
   degree: string;
   year: string;
   about: string;
-  skills: string;
-  interests: string;
+  skills: string[] | string;
+  interests: string[] | string;
   availability: string;
   projects: Project[];
-};
-
-type Team = {
-  id: number;
-  name: string;
-  project: string;
-  members: TeamMember[];
 };
 
 type TeamMember = {
@@ -42,816 +33,538 @@ type TeamMember = {
   role: string;
 };
 
+type Team = {
+  id: number;
+  name: string;
+  project: string;
+  members: TeamMember[];
+};
+
+const normalizeList = (
+  value: string | string[] | null | undefined
+): string[] => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (!value) {
+    return [];
+  }
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+};
+
 function StudentProfile() {
   const { studentId } = useParams();
 
-  const [student, setStudent] =
-    useState<Student | null>(null);
+  const [student, setStudent] = useState<Student | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
 
-  const [teams, setTeams] =
-    useState<Team[]>([]);
+  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const [role, setRole] = useState("");
 
-  const [selectedTeamId, setSelectedTeamId] =
-    useState("");
+  const [loading, setLoading] = useState(true);
+  const [addingMember, setAddingMember] = useState(false);
 
-  const [role, setRole] =
-    useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const [loading, setLoading] =
-    useState(true);
-
-  const [loadingTeams, setLoadingTeams] =
-    useState(false);
-
-  const [addingMember, setAddingMember] =
-    useState(false);
-
-  const [showTeamForm, setShowTeamForm] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
-
-
-  // ==================================================
-  // FETCH STUDENT
-  // ==================================================
-
+  /*
+   * Load student profile
+   */
   useEffect(() => {
-
-    const fetchStudent = async () => {
-
-      try {
-
-        setLoading(true);
-
-        const response = await axios.get(
-          `${API_URL}/profiles`
-        );
-
-        const profiles: Student[] =
-          response.data;
-
-        const foundStudent =
-          profiles.find(
-            (profile) =>
-              profile.id === Number(studentId)
-          );
-
-        if (!foundStudent) {
-
-          setError(
-            "Student profile not found."
-          );
-
-          return;
-        }
-
-        setStudent(foundStudent);
-
-      } catch (error) {
-
-        console.error(error);
-
-        setError(
-          "Unable to load student profile."
-        );
-
-      } finally {
-
+    const loadStudent = async () => {
+      if (!studentId) {
+        setError("Student ID is missing.");
         setLoading(false);
-
+        return;
       }
 
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await axios.get(
+          `${API_URL}/profiles/${studentId}`
+        );
+
+        const data = response.data;
+
+        setStudent({
+          id: data.id,
+          name: data.name || "",
+          email: data.email || "",
+          phone: data.phone || null,
+          institution: data.institution || "",
+          degree: data.degree || "",
+          year: data.year || "",
+          about: data.about || "",
+          skills: data.skills || [],
+          interests: data.interests || [],
+          availability: data.availability || "",
+          projects: Array.isArray(data.projects)
+            ? data.projects
+            : [],
+        });
+      } catch (err: any) {
+        console.error("Unable to load student:", err);
+
+        setError(
+          err?.response?.data?.detail ||
+            "Unable to load student profile."
+        );
+      } finally {
+        setLoading(false);
+      }
     };
 
-    fetchStudent();
-
+    loadStudent();
   }, [studentId]);
 
+  /*
+   * Load teams
+   */
+  useEffect(() => {
+    const loadTeams = async () => {
+      try {
+        const response = await axios.get(
+          `${API_URL}/teams`
+        );
 
-  // ==================================================
-  // FETCH TEAMS
-  // ==================================================
+        setTeams(
+          Array.isArray(response.data)
+            ? response.data
+            : []
+        );
+      } catch (err) {
+        console.error("Unable to load teams:", err);
+      }
+    };
 
-  const fetchTeams = async () => {
+    loadTeams();
+  }, []);
 
-    try {
-
-      setLoadingTeams(true);
-
-      const response = await axios.get(
-        `${API_URL}/teams`
-      );
-
-      setTeams(response.data);
-
-    } catch (error) {
-
-      console.error(error);
-
-      alert(
-        "Unable to load your teams."
-      );
-
-    } finally {
-
-      setLoadingTeams(false);
-
+  /*
+   * Add student to selected team
+   */
+  const handleAddToTeam = async () => {
+    if (!student) {
+      return;
     }
-
-  };
-
-
-  // ==================================================
-  // OPEN TEAM FORM
-  // ==================================================
-
-  const openTeamForm = async () => {
-
-    setShowTeamForm(true);
-
-    await fetchTeams();
-
-  };
-
-
-  // ==================================================
-  // ADD STUDENT TO TEAM
-  // ==================================================
-
-  const addToTeam = async () => {
 
     if (!selectedTeamId) {
-
-      alert("Please select a team.");
-
+      setError("Please select a team.");
       return;
-
     }
 
-    if (!role.trim()) {
-
-      alert("Please enter a role.");
-
-      return;
-
-    }
-
-    if (!student) {
-
-      return;
-
-    }
-
-    // Get the same token used by Login.tsx
-    const token = localStorage.getItem(
-      "talentos_access_token"
-    );
-
-    if (!token) {
-
-      alert(
-        "Please login before adding a student to a team."
-      );
-
-      return;
-
-    }
+    setAddingMember(true);
+    setError("");
+    setSuccess("");
 
     try {
+      const token = localStorage.getItem(
+        "talentos_token"
+      );
 
-      setAddingMember(true);
+      const headers = token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {};
 
-      const response = await axios.post(
+      await axios.post(
         `${API_URL}/teams/${selectedTeamId}/members`,
         {
           profile_id: student.id,
           role: role.trim(),
         },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+          headers,
         }
       );
 
-      console.log(response.data);
-
-      alert(
-        `${student.name} was added to the team successfully!`
+      setSuccess(
+        `${student.name} was added to the team successfully.`
       );
 
       setSelectedTeamId("");
-
       setRole("");
 
-      setShowTeamForm(false);
-
-      await fetchTeams();
-
-    } catch (error) {
-
-      console.error(
-        "Failed to add student to team:",
-        error
+      /*
+       * Refresh teams after adding member
+       */
+      const response = await axios.get(
+        `${API_URL}/teams`
       );
 
-      if (axios.isAxiosError(error)) {
+      setTeams(
+        Array.isArray(response.data)
+          ? response.data
+          : []
+      );
+    } catch (err: any) {
+      console.error("Unable to add student to team:", err);
 
-        console.error(
-          "Status:",
-          error.response?.status
-        );
-
-        console.error(
-          "Response:",
-          error.response?.data
-        );
-
-        if (error.response?.status === 401) {
-
-          alert(
-            "Your login session has expired. Please login again."
-          );
-
-        } else if (
-          error.response?.data?.detail
-        ) {
-
-          alert(
-            error.response.data.detail
-          );
-
-        } else {
-
-          alert(
-            "Unable to add student to the team."
-          );
-
-        }
-
-      } else {
-
-        alert(
-          "Something went wrong."
-        );
-
-      }
-
+      setError(
+        err?.response?.data?.detail ||
+          "Unable to add student to the team."
+      );
     } finally {
-
       setAddingMember(false);
-
     }
-
   };
 
-
-  // ==================================================
-  // LOADING
-  // ==================================================
-
   if (loading) {
-
     return (
-
-      <div className="min-h-screen bg-slate-50">
-
-        <Navbar />
-
-        <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-
-            <p className="text-sm text-slate-500">
-              Loading profile...
-            </p>
-
+      <main className="min-h-screen bg-slate-50">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+            <div className="animate-pulse">
+              <div className="h-8 w-56 rounded bg-slate-200" />
+              <div className="mt-4 h-4 w-80 rounded bg-slate-200" />
+              <div className="mt-8 h-24 rounded bg-slate-100" />
+            </div>
           </div>
-
-        </main>
-
-        <Footer />
-
-      </div>
-
+        </div>
+      </main>
     );
-
   }
 
-
-  // ==================================================
-  // ERROR
-  // ==================================================
-
-  if (error || !student) {
-
+  if (!student) {
     return (
-
-      <div className="min-h-screen bg-slate-50">
-
-        <Navbar />
-
-        <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
-
-            <h1 className="text-xl font-semibold text-slate-950">
-              Profile not found
+      <main className="min-h-screen bg-slate-50">
+        <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
+            <h1 className="text-lg font-semibold text-red-800">
+              Student profile not found
             </h1>
 
-            <p className="mt-2 text-sm text-slate-500">
-              {error}
+            <p className="mt-2 text-sm text-red-700">
+              {error || "Unable to find this profile."}
             </p>
 
             <Link
               to="/discover"
-              className="mt-6 inline-block rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+              className="mt-5 inline-flex rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
             >
               Back to Discover
             </Link>
-
           </div>
-
-        </main>
-
-        <Footer />
-
-      </div>
-
+        </div>
+      </main>
     );
-
   }
 
-
-  // ==================================================
-  // SKILLS
-  // ==================================================
-
-  const skills = student.skills
-    ? student.skills
-        .split(",")
-        .map((skill) => skill.trim())
-        .filter(Boolean)
-    : [];
-
-
-  // ==================================================
-  // INTERESTS
-  // ==================================================
-
-  const interests = student.interests
-    ? student.interests
-        .split(",")
-        .map((interest) => interest.trim())
-        .filter(Boolean)
-    : [];
-
-
-  // ==================================================
-  // PAGE
-  // ==================================================
+  const skills = normalizeList(student.skills);
+  const interests = normalizeList(student.interests);
 
   return (
+    <main className="min-h-screen bg-slate-50">
+      <div className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
 
-    <div className="min-h-screen bg-slate-50">
-
-      <Navbar />
-
-      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-
-
-        {/* BACK */}
-
+        {/* Back */}
         <Link
           to="/discover"
-          className="text-sm text-slate-500 hover:text-slate-950"
+          className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900"
         >
           ← Back to Discover
         </Link>
 
+        {/* Error */}
+        {error && (
+          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
 
-        {/* PROFILE HEADER */}
+        {/* Success */}
+        {success && (
+          <div className="mt-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {success}
+          </div>
+        )}
 
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
-
+        {/* Profile header */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
 
             <div>
-
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-xl font-semibold text-slate-700">
-
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-2xl font-bold text-blue-600">
                 {student.name
-                  .charAt(0)
-                  .toUpperCase()}
-
+                  ? student.name
+                      .charAt(0)
+                      .toUpperCase()
+                  : "?"}
               </div>
-
 
               <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-950">
-
                 {student.name}
-
               </h1>
 
-
-              <p className="mt-2 text-slate-600">
-
+              <p className="mt-2 text-sm text-slate-500">
                 {student.degree}
-
+                {student.year
+                  ? ` • ${student.year}`
+                  : ""}
               </p>
 
+              {student.institution && (
+                <p className="mt-1 text-sm text-slate-500">
+                  {student.institution}
+                </p>
+              )}
 
-              <p className="mt-1 text-sm text-slate-500">
-
-                {student.year}
-
-              </p>
-
+              <div className="mt-4">
+                <span className="inline-flex rounded-full bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700">
+                  {student.availability ||
+                    "Availability not specified"}
+                </span>
+              </div>
             </div>
 
-
-            <span className="w-fit rounded-full bg-slate-100 px-4 py-2 text-sm text-slate-700">
-
-              {student.availability}
-
-            </span>
-
+            <a
+              href={`mailto:${student.email}`}
+              className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              Contact Student
+            </a>
           </div>
-
-
-          {/* ADD TO TEAM BUTTON */}
-
-          <div className="mt-8 border-t border-slate-100 pt-6">
-
-            {!showTeamForm ? (
-
-              <button
-                type="button"
-                onClick={openTeamForm}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                Add to team
-              </button>
-
-            ) : (
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-
-                <h2 className="text-lg font-semibold text-slate-950">
-                  Add {student.name} to a team
-                </h2>
-
-                <p className="mt-2 text-sm text-slate-500">
-                  Select one of your teams and define this
-                  student's role.
-                </p>
-
-
-                {loadingTeams ? (
-
-                  <p className="mt-5 text-sm text-slate-500">
-                    Loading teams...
-                  </p>
-
-                ) : teams.length === 0 ? (
-
-                  <div className="mt-5">
-
-                    <p className="text-sm text-slate-500">
-                      You don't have any teams yet.
-                    </p>
-
-                    <Link
-                      to="/teams"
-                      className="mt-4 inline-block rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
-                    >
-                      Create a team
-                    </Link>
-
-                  </div>
-
-                ) : (
-
-                  <div className="mt-5 space-y-4">
-
-                    {/* TEAM */}
-
-                    <div>
-
-                      <label
-                        htmlFor="team"
-                        className="text-sm font-medium text-slate-900"
-                      >
-                        Select team
-                      </label>
-
-                      <select
-                        id="team"
-                        value={selectedTeamId}
-                        onChange={(event) =>
-                          setSelectedTeamId(
-                            event.target.value
-                          )
-                        }
-                        className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
-                      >
-
-                        <option value="">
-                          Select a team
-                        </option>
-
-                        {teams.map((team) => (
-
-                          <option
-                            key={team.id}
-                            value={team.id}
-                          >
-                            {team.name} — {team.project}
-                          </option>
-
-                        ))}
-
-                      </select>
-
-                    </div>
-
-
-                    {/* ROLE */}
-
-                    <div>
-
-                      <label
-                        htmlFor="role"
-                        className="text-sm font-medium text-slate-900"
-                      >
-                        Role
-                      </label>
-
-                      <input
-                        id="role"
-                        type="text"
-                        value={role}
-                        onChange={(event) =>
-                          setRole(
-                            event.target.value
-                          )
-                        }
-                        placeholder="e.g. ML Engineer"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                      />
-
-                    </div>
-
-
-                    {/* BUTTONS */}
-
-                    <div className="flex flex-col gap-3 sm:flex-row">
-
-                      <button
-                        type="button"
-                        onClick={addToTeam}
-                        disabled={addingMember}
-                        className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-
-                        {addingMember
-                          ? "Adding..."
-                          : "Add to team"}
-
-                      </button>
-
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowTeamForm(false);
-                          setSelectedTeamId("");
-                          setRole("");
-                        }}
-                        className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-                      >
-                        Cancel
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                )}
-
-              </div>
-
-            )}
-
-          </div>
-
         </section>
 
-
-        {/* ABOUT */}
-
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
-
-          <h2 className="text-xl font-semibold text-slate-950">
+        {/* About */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-950">
             About
           </h2>
 
-          <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">
-
+          <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600">
             {student.about ||
-              "No description provided."}
-
+              "This student has not added an about section yet."}
           </p>
-
         </section>
 
-
-        {/* SKILLS */}
-
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
-
-          <h2 className="text-xl font-semibold text-slate-950">
+        {/* Skills */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-950">
             Skills
           </h2>
 
           {skills.length > 0 ? (
-
-            <div className="mt-5 flex flex-wrap gap-2">
-
-              {skills.map((skill) => (
-
+            <div className="mt-4 flex flex-wrap gap-2">
+              {skills.map((skill, index) => (
                 <span
-                  key={skill}
-                  className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
+                  key={`${skill}-${index}`}
+                  className="rounded-full bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700"
                 >
                   {skill}
                 </span>
-
               ))}
-
             </div>
-
           ) : (
-
-            <p className="mt-4 text-sm text-slate-500">
-              No skills listed.
+            <p className="mt-3 text-sm text-slate-400">
+              No skills specified.
             </p>
-
           )}
-
         </section>
 
-
-        {/* INTERESTS */}
-
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
-
-          <h2 className="text-xl font-semibold text-slate-950">
+        {/* Interests */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-950">
             Interests
           </h2>
 
           {interests.length > 0 ? (
-
-            <div className="mt-5 flex flex-wrap gap-2">
-
-              {interests.map((interest) => (
-
+            <div className="mt-4 flex flex-wrap gap-2">
+              {interests.map((interest, index) => (
                 <span
-                  key={interest}
-                  className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
+                  key={`${interest}-${index}`}
+                  className="rounded-full bg-purple-50 px-3 py-1.5 text-sm font-medium text-purple-700"
                 >
                   {interest}
                 </span>
-
               ))}
-
             </div>
-
           ) : (
-
-            <p className="mt-4 text-sm text-slate-500">
-              No interests listed.
+            <p className="mt-3 text-sm text-slate-400">
+              No interests specified.
             </p>
-
           )}
-
         </section>
 
-
-        {/* PROJECTS */}
-
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
-
-          <h2 className="text-xl font-semibold text-slate-950">
+        {/* Projects */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-950">
             Projects
           </h2>
 
           {student.projects.length > 0 ? (
-
             <div className="mt-5 space-y-4">
+              {student.projects.map(
+                (project, index) => (
+                  <div
+                    key={project.id ?? index}
+                    className="rounded-xl border border-slate-200 p-5"
+                  >
+                    <h3 className="font-semibold text-slate-900">
+                      {project.name}
+                    </h3>
 
-              {student.projects.map((project) => (
+                    {project.description && (
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        {project.description}
+                      </p>
+                    )}
 
-                <div
-                  key={project.id}
-                  className="rounded-lg border border-slate-200 p-5"
-                >
-
-                  <h3 className="text-lg font-semibold text-slate-950">
-                    {project.name}
-                  </h3>
-
-                  <p className="mt-3 text-sm leading-6 text-slate-600">
-                    {project.description}
-                  </p>
-
-                  <p className="mt-4 text-sm text-slate-500">
-
-                    <span className="font-medium text-slate-700">
-                      Technologies:
-                    </span>{" "}
-
-                    {project.technologies}
-
-                  </p>
-
-                </div>
-
-              ))}
-
+                    {project.technologies && (
+                      <p className="mt-3 text-xs font-medium text-slate-500">
+                        Technologies:{" "}
+                        <span className="text-slate-700">
+                          {project.technologies}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                )
+              )}
             </div>
-
           ) : (
-
-            <p className="mt-4 text-sm text-slate-500">
-              No projects listed.
+            <p className="mt-3 text-sm text-slate-400">
+              No projects added yet.
             </p>
-
           )}
-
         </section>
 
-
-        {/* CONTACT */}
-
-        <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6 sm:p-8">
-
-          <h2 className="text-xl font-semibold text-slate-950">
+        {/* Contact */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-950">
             Contact
           </h2>
 
+          <div className="mt-4 space-y-3 text-sm">
+            <div>
+              <span className="font-medium text-slate-700">
+                Email:
+              </span>{" "}
+              <a
+                href={`mailto:${student.email}`}
+                className="text-blue-600 hover:underline"
+              >
+                {student.email}
+              </a>
+            </div>
 
-          <div className="mt-4">
-
-            <p className="text-sm text-slate-600">
-              Email
-            </p>
-
-            <p className="mt-1 text-sm font-medium text-slate-900">
-              {student.email}
-            </p>
-
+            {student.phone && (
+              <div>
+                <span className="font-medium text-slate-700">
+                  Phone:
+                </span>{" "}
+                <a
+                  href={`tel:${student.phone}`}
+                  className="text-blue-600 hover:underline"
+                >
+                  {student.phone}
+                </a>
+              </div>
+            )}
           </div>
-
-
-          <div className="mt-5">
-
-            <p className="text-sm text-slate-600">
-              Phone
-            </p>
-
-            <p className="mt-1 text-sm font-medium text-slate-900">
-              {student.phone ||
-                "No phone number provided."}
-            </p>
-
-          </div>
-
         </section>
 
+        {/* Add to team */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Add to Team
+            </h2>
 
-        {/* BACK BUTTON */}
+            <p className="mt-1 text-sm text-slate-500">
+              Add {student.name} to one of your existing teams.
+            </p>
+          </div>
 
-        <div className="mt-8">
+          {teams.length === 0 ? (
+            <div className="mt-5 rounded-xl border border-dashed border-slate-200 p-6 text-center">
+              <p className="text-sm text-slate-500">
+                You don't have any teams yet.
+              </p>
 
-          <Link
-            to="/discover"
-            className="inline-block rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          >
-            ← Back to Discover
-          </Link>
+              <Link
+                to="/teams"
+                className="mt-3 inline-flex rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800"
+              >
+                Create a Team
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-5 space-y-4">
 
-        </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">
+                  Select Team
+                </label>
 
-      </main>
+                <select
+                  value={selectedTeamId}
+                  onChange={(e) =>
+                    setSelectedTeamId(
+                      e.target.value
+                    )
+                  }
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                >
+                  <option value="">
+                    Select a team
+                  </option>
 
-      <Footer />
+                  {teams.map((team) => (
+                    <option
+                      key={team.id}
+                      value={team.id}
+                    >
+                      {team.name}
+                      {team.project
+                        ? ` — ${team.project}`
+                        : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-    </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700">
+                  Role
+                </label>
 
+                <input
+                  value={role}
+                  onChange={(e) =>
+                    setRole(e.target.value)
+                  }
+                  placeholder="e.g. ML Engineer"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAddToTeam}
+                disabled={
+                  addingMember || !selectedTeamId
+                }
+                className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {addingMember
+                  ? "Adding..."
+                  : "Add to Team"}
+              </button>
+            </div>
+          )}
+        </section>
+
+      </div>
+    </main>
   );
 }
 
