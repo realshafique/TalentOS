@@ -34,6 +34,7 @@ class ProfileCreate(BaseModel):
     name: str
     email: EmailStr
     phone: Optional[str] = ""
+    institution: str
     degree: str
     year: str
     about: str = ""
@@ -47,6 +48,7 @@ class ProfileUpdate(BaseModel):
     name: str
     email: EmailStr
     phone: Optional[str] = ""
+    institution: str
     degree: str
     year: str
     about: str = ""
