@@ -22,10 +22,41 @@ type ProfileData = {
   degree: string;
   year: string;
   about: string;
-  skills: string;
-  interests: string;
+
+  // Backend may return these as either arrays or comma-separated strings
+  skills: string[] | string | null;
+  interests: string[] | string | null;
+
   availability: string;
   projects: Project[];
+};
+
+/*
+ * Convert skills/interests into a consistent array.
+ *
+ * Supports:
+ * ["Python", "AI", "ML"]
+ *
+ * and:
+ * "Python, AI, ML"
+ */
+const normalizeList = (
+  value: string[] | string | null | undefined
+): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
 };
 
 function Profile() {
@@ -45,7 +76,9 @@ function Profile() {
           return;
         }
 
-        const response = await axios.get(`${API_URL}/profiles`);
+        const response = await axios.get(
+          `${API_URL}/profiles`
+        );
 
         const profiles: ProfileData[] = response.data;
 
@@ -83,19 +116,14 @@ function Profile() {
     fetchProfile();
   }, []);
 
-  const skills = profile?.skills
-    ? profile.skills
-        .split(",")
-        .map((skill) => skill.trim())
-        .filter(Boolean)
-    : [];
+  /*
+   * Normalize skills and interests safely.
+   */
+  const skills = normalizeList(profile?.skills);
 
-  const interests = profile?.interests
-    ? profile.interests
-        .split(",")
-        .map((interest) => interest.trim())
-        .filter(Boolean)
-    : [];
+  const interests = normalizeList(
+    profile?.interests
+  );
 
   if (loading) {
     return (
@@ -150,8 +178,8 @@ function Profile() {
       <Navbar />
 
       <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-        {/* HEADER */}
 
+        {/* HEADER */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500">
@@ -172,13 +200,13 @@ function Profile() {
         </div>
 
         {/* BASIC INFORMATION */}
-
         <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Basic information
           </h2>
 
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
+
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Name
@@ -218,17 +246,18 @@ function Profile() {
                 {profile.availability}
               </p>
             </div>
+
           </div>
         </section>
 
         {/* CONTACT */}
-
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Contact information
           </h2>
 
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
+
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Email
@@ -248,23 +277,23 @@ function Profile() {
                 {profile.phone || "Not provided"}
               </p>
             </div>
+
           </div>
         </section>
 
         {/* ABOUT */}
-
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             About
           </h2>
 
           <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">
-            {profile.about || "No description provided."}
+            {profile.about ||
+              "No description provided."}
           </p>
         </section>
 
         {/* SKILLS */}
-
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Skills
@@ -272,9 +301,9 @@ function Profile() {
 
           {skills.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-2">
-              {skills.map((skill) => (
+              {skills.map((skill, index) => (
                 <span
-                  key={skill}
+                  key={`${skill}-${index}`}
                   className="rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-700"
                 >
                   {skill}
@@ -289,7 +318,6 @@ function Profile() {
         </section>
 
         {/* INTERESTS */}
-
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Interests
@@ -297,9 +325,9 @@ function Profile() {
 
           {interests.length > 0 ? (
             <div className="mt-4 flex flex-wrap gap-2">
-              {interests.map((interest) => (
+              {interests.map((interest, index) => (
                 <span
-                  key={interest}
+                  key={`${interest}-${index}`}
                   className="rounded-md bg-slate-100 px-3 py-1.5 text-sm text-slate-700"
                 >
                   {interest}
@@ -314,7 +342,6 @@ function Profile() {
         </section>
 
         {/* PROJECTS */}
-
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Projects
@@ -350,6 +377,7 @@ function Profile() {
             </p>
           )}
         </section>
+
       </main>
 
       <Footer />
