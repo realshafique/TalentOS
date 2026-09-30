@@ -7,7 +7,6 @@ from typing import List, Optional
 # =========================================================
 
 class RegisterRequest(BaseModel):
-    name: str
     email: EmailStr
     password: str
 
