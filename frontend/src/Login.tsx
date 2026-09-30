@@ -18,6 +18,7 @@ export default function Login() {
     setLoading(true);
 
     try {
+      // FastAPI OAuth2 login expects form-urlencoded data
       const formData = new URLSearchParams();
 
       formData.append("username", email.trim());
@@ -33,6 +34,7 @@ export default function Login() {
 
       const data = await response.json();
 
+      // Handle login failure
       if (!response.ok) {
         throw new Error(
           typeof data.detail === "string"
@@ -41,20 +43,29 @@ export default function Login() {
         );
       }
 
+      // Backend must return an access token
       if (!data.access_token) {
-        throw new Error("Login succeeded but no access token was returned.");
+        throw new Error(
+          "Login succeeded but no access token was returned."
+        );
       }
 
-      // Always save the access token
+      // =====================================================
+      // SAVE AUTHENTICATION TOKEN
+      // =====================================================
+
       localStorage.setItem(
         "talentos_access_token",
         data.access_token
       );
 
-      // Remove any old profile ID first
+      // Remove old profile ID
       localStorage.removeItem("talentos_profile_id");
 
-      // Existing profile
+      // =====================================================
+      // SAVE PROFILE ID IF USER ALREADY HAS A PROFILE
+      // =====================================================
+
       if (
         data.user?.profile_id !== null &&
         data.user?.profile_id !== undefined
@@ -66,7 +77,7 @@ export default function Login() {
 
         navigate("/profile");
       } else {
-        // New user without a profile
+        // User has not created a profile yet
         navigate("/create-profile");
       }
     } catch (error) {
@@ -86,6 +97,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-md">
 
+        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold">
             Welcome Back
@@ -96,10 +108,13 @@ export default function Login() {
           </p>
         </div>
 
+        {/* Login Form */}
         <form
           onSubmit={handleLogin}
           className="space-y-5"
         >
+
+          {/* Email */}
           <div>
             <label className="mb-2 block font-medium">
               Email
@@ -111,10 +126,12 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
+              autoComplete="email"
               className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
             />
           </div>
 
+          {/* Password */}
           <div>
             <label className="mb-2 block font-medium">
               Password
@@ -126,16 +143,19 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
+              autoComplete="current-password"
               className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
             />
           </div>
 
+          {/* Error */}
           {error && (
             <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
               {error}
             </div>
           )}
 
+          {/* Login Button */}
           <button
             type="submit"
             disabled={loading}
@@ -145,8 +165,10 @@ export default function Login() {
           </button>
         </form>
 
+        {/* Register */}
         <p className="mt-6 text-center text-sm text-gray-500">
           Don't have an account?{" "}
+
           <Link
             to="/register"
             className="font-semibold text-black"

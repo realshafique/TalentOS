@@ -165,25 +165,44 @@ function StudentProfile() {
     setSuccess("");
 
     try {
+      /*
+       * IMPORTANT:
+       * Login.tsx stores the JWT using:
+       *
+       * talentos_access_token
+       *
+       * Therefore we MUST use the same key here.
+       */
       const token = localStorage.getItem(
-        "talentos_token"
+        "talentos_access_token"
       );
 
-      const headers = token
-        ? {
-            Authorization: `Bearer ${token}`,
-          }
-        : {};
+      if (!token) {
+        setError(
+          "You are not authenticated. Please login again."
+        );
+        return;
+      }
 
-      await axios.post(
+      console.log("Authentication token found.");
+
+      const response = await axios.post(
         `${API_URL}/teams/${selectedTeamId}/members`,
         {
           profile_id: student.id,
           role: role.trim(),
         },
         {
-          headers,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
         }
+      );
+
+      console.log(
+        "Student added successfully:",
+        response.data
       );
 
       setSuccess(
@@ -196,21 +215,54 @@ function StudentProfile() {
       /*
        * Refresh teams after adding member
        */
-      const response = await axios.get(
+      const teamsResponse = await axios.get(
         `${API_URL}/teams`
       );
 
       setTeams(
-        Array.isArray(response.data)
-          ? response.data
+        Array.isArray(teamsResponse.data)
+          ? teamsResponse.data
           : []
       );
     } catch (err: any) {
-      console.error("Unable to add student to team:", err);
+      console.error(
+        "Unable to add student to team:",
+        err
+      );
+
+      if (axios.isAxiosError(err)) {
+        console.error(
+          "Status:",
+          err.response?.status
+        );
+
+        console.error(
+          "Response:",
+          err.response?.data
+        );
+
+        if (err.response?.status === 401) {
+          localStorage.removeItem(
+            "talentos_access_token"
+          );
+
+          setError(
+            "Your login session has expired. Please login again."
+          );
+
+          return;
+        }
+
+        setError(
+          err.response?.data?.detail ||
+            "Unable to add student to the team."
+        );
+
+        return;
+      }
 
       setError(
-        err?.response?.data?.detail ||
-          "Unable to add student to the team."
+        "Unable to add student to the team."
       );
     } finally {
       setAddingMember(false);
@@ -294,9 +346,7 @@ function StudentProfile() {
             <div>
               <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 text-2xl font-bold text-blue-600">
                 {student.name
-                  ? student.name
-                      .charAt(0)
-                      .toUpperCase()
+                  ? student.name.charAt(0).toUpperCase()
                   : "?"}
               </div>
 
@@ -472,7 +522,7 @@ function StudentProfile() {
           </div>
         </section>
 
-        {/* Add to team */}
+        {/* Add to Team */}
         <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div>
             <h2 className="text-lg font-semibold text-slate-950">
@@ -508,9 +558,7 @@ function StudentProfile() {
                 <select
                   value={selectedTeamId}
                   onChange={(e) =>
-                    setSelectedTeamId(
-                      e.target.value
-                    )
+                    setSelectedTeamId(e.target.value)
                   }
                   className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                 >
