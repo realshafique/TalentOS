@@ -1,7 +1,7 @@
 import API_URL from "../config";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -14,6 +14,7 @@ type Project = {
 };
 
 type Profile = {
+  id?: number;
   name: string;
   email: string;
   phone: string;
@@ -27,209 +28,108 @@ type Profile = {
   availability: string;
 };
 
-const createEmptyProject = (): Project => ({
-  id: Date.now(),
-  name: "",
-  description: "",
-  technologies: "",
-});
-
-const emptyProfile: Profile = {
-  name: "",
-  email: "",
-  phone: "",
-  institution: "",
-  degree: "",
-  year: "",
-  about: "",
-  skills: [],
-  interests: [],
-  projects: [
-    {
-      id: 1,
-      name: "",
-      description: "",
-      technologies: "",
-    },
-  ],
-  availability: "Available",
-};
-
-function CreateProfile() {
+function StudentProfile() {
+  const { studentId } = useParams<{ studentId: string }>();
   const navigate = useNavigate();
 
-  const [profile, setProfile] = useState<Profile>(emptyProfile);
-  const [profileId, setProfileId] = useState<number | null>(null);
-
-  const [skillInput, setSkillInput] = useState("");
-  const [interestInput, setInterestInput] = useState("");
-
-  const [loading, setLoading] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(false);
-
-  const [isEditing, setIsEditing] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    const token = localStorage.getItem("talentos_access_token");
+    const fetchStudentProfile = async () => {
+      const token = localStorage.getItem("talentos_access_token");
 
-    if (!token) {
-      navigate("/login");
-      return;
-    }
+      if (!token) {
+        navigate("/login");
+        return;
+      }
 
-    // Do not block the page while Render wakes up.
-    // Profile detection happens in the background.
-    setLoadingProfile(true);
+      const id = Number(studentId);
 
-    const cachedUserRaw = localStorage.getItem("talentos_user");
-    let cachedUser: any = null;
+      if (!Number.isInteger(id) || id <= 0) {
+        setError("Invalid student profile.");
+        setLoading(false);
+        return;
+      }
 
-    try {
-      cachedUser = cachedUserRaw ? JSON.parse(cachedUserRaw) : null;
-    } catch {
-      localStorage.removeItem("talentos_user");
-    }
-
-    const applyProfile = (existingProfile: any) => {
-      const projects: Project[] =
-        Array.isArray(existingProfile.projects)
-          ? existingProfile.projects.map(
-              (project: any, index: number) => ({
-                id: Number(project.id) || Date.now() + index,
-                name:
-                  typeof project.name === "string"
-                    ? project.name
-                    : "",
-                description:
-                  typeof project.description === "string"
-                    ? project.description
-                    : "",
-                technologies:
-                  typeof project.technologies === "string"
-                    ? project.technologies
-                    : "",
-              })
-            )
-          : [];
-
-      setProfile({
-        name: existingProfile.name || "",
-        email: existingProfile.email || "",
-        phone: existingProfile.phone || "",
-        institution: existingProfile.institution || "",
-        degree: existingProfile.degree || "",
-        year: existingProfile.year || "",
-        about: existingProfile.about || "",
-
-        skills: Array.isArray(existingProfile.skills)
-          ? existingProfile.skills.filter(
-              (skill: unknown): skill is string =>
-                typeof skill === "string"
-            )
-          : typeof existingProfile.skills === "string"
-            ? existingProfile.skills
-                .split(",")
-                .map((skill: string) => skill.trim())
-                .filter(Boolean)
-            : [],
-
-        interests: Array.isArray(existingProfile.interests)
-          ? existingProfile.interests.filter(
-              (interest: unknown): interest is string =>
-                typeof interest === "string"
-            )
-          : typeof existingProfile.interests === "string"
-            ? existingProfile.interests
-                .split(",")
-                .map((interest: string) => interest.trim())
-                .filter(Boolean)
-            : [],
-
-        projects:
-          projects.length > 0
-            ? projects
-            : [createEmptyProject()],
-
-        availability:
-          existingProfile.availability || "Available",
-      });
-
-      setIsEditing(true);
-    };
-
-    const fetchProfile = async () => {
       try {
-        const authHeaders = {
-          Authorization: `Bearer ${token}`,
-        };
+        setLoading(true);
+        setError("");
 
-        // Reuse the cached profile ID whenever possible.
-        let id = Number(cachedUser?.profile_id) || null;
-
-        // Only hit /auth/me when we don't already know the profile ID.
-        if (!id) {
-          const meResponse = await axios.get(
-            `${API_URL}/auth/me`,
-            {
-              headers: authHeaders,
-              timeout: 15000,
-            }
-          );
-
-          const currentUser = meResponse.data;
-          id = Number(currentUser?.profile_id) || null;
-
-          // Cache the user/profile relationship for future visits.
-          localStorage.setItem(
-            "talentos_user",
-            JSON.stringify(currentUser)
-          );
-        }
-
-        if (!id) {
-          return;
-        }
-
-        setProfileId(id);
-
-        const cacheKey = `talentos_profile_${id}`;
-        const cachedProfileRaw = sessionStorage.getItem(cacheKey);
-
-        // Paint cached profile immediately if it exists.
-        if (cachedProfileRaw) {
-          try {
-            applyProfile(JSON.parse(cachedProfileRaw));
-          } catch {
-            sessionStorage.removeItem(cacheKey);
-          }
-        }
-
-        // Fetch ONLY this profile instead of downloading every student.
         const response = await axios.get(
           `${API_URL}/profiles/${id}`,
           {
-            headers: authHeaders,
-            timeout: 15000,
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           }
         );
 
-        const existingProfile = response.data;
+        const data = response.data;
 
-        if (existingProfile) {
-          applyProfile(existingProfile);
+        setProfile({
+          id: data.id,
+          name: data.name || "",
+          email: data.email || "",
+          phone: data.phone || "",
+          institution: data.institution || "",
+          degree: data.degree || "",
+          year: data.year || "",
+          about: data.about || "",
 
-          // Keep the local cache fresh for the next visit.
-          sessionStorage.setItem(
-            cacheKey,
-            JSON.stringify(existingProfile)
-          );
-        }
-      } catch (error) {
-        console.error("Failed to load profile:", error);
+          skills: Array.isArray(data.skills)
+            ? data.skills.filter(
+                (skill: unknown): skill is string =>
+                  typeof skill === "string"
+              )
+            : typeof data.skills === "string"
+              ? data.skills
+                  .split(",")
+                  .map((skill: string) => skill.trim())
+                  .filter(Boolean)
+              : [],
+
+          interests: Array.isArray(data.interests)
+            ? data.interests.filter(
+                (interest: unknown): interest is string =>
+                  typeof interest === "string"
+              )
+            : typeof data.interests === "string"
+              ? data.interests
+                  .split(",")
+                  .map((interest: string) => interest.trim())
+                  .filter(Boolean)
+              : [],
+
+          projects: Array.isArray(data.projects)
+            ? data.projects.map(
+                (project: any, index: number) => ({
+                  id: Number(project.id) || index + 1,
+                  name:
+                    typeof project.name === "string"
+                      ? project.name
+                      : "",
+                  description:
+                    typeof project.description === "string"
+                      ? project.description
+                      : "",
+                  technologies:
+                    typeof project.technologies === "string"
+                      ? project.technologies
+                      : "",
+                })
+              )
+            : [],
+
+          availability: data.availability || "Available",
+        });
+      } catch (err) {
+        console.error("Failed to load student profile:", err);
 
         if (
-          axios.isAxiosError(error) &&
-          error.response?.status === 401
+          axios.isAxiosError(err) &&
+          err.response?.status === 401
         ) {
           localStorage.removeItem("talentos_access_token");
           localStorage.removeItem("talentos_user");
@@ -237,838 +137,269 @@ function CreateProfile() {
           return;
         }
 
-        // Do not block the user because Render is waking slowly.
+        if (
+          axios.isAxiosError(err) &&
+          err.response?.status === 404
+        ) {
+          setError("Student profile not found.");
+        } else {
+          setError(
+            "Unable to load this student's profile. Please try again."
+          );
+        }
       } finally {
-        setLoadingProfile(false);
+        setLoading(false);
       }
     };
 
-    fetchProfile();
-  }, [navigate]);
+    fetchStudentProfile();
+  }, [studentId, navigate]);
 
-  const handleChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = event.target;
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
 
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      [name]: value,
-    }));
-  };
+        <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
+          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
 
-  const addSkill = () => {
-    const skill = skillInput.trim();
+            <p className="mt-4 text-sm text-slate-500">
+              Loading student profile...
+            </p>
+          </div>
+        </main>
 
-    if (!skill) {
-      return;
-    }
-
-    const alreadyExists = profile.skills.some(
-      (existingSkill) =>
-        existingSkill.toLowerCase() === skill.toLowerCase()
+        <Footer />
+      </div>
     );
+  }
 
-    if (alreadyExists) {
-      setSkillInput("");
-      return;
-    }
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
 
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      skills: [...previousProfile.skills, skill],
-    }));
+        <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
+          <div className="rounded-2xl border border-red-200 bg-white p-10 text-center shadow-sm">
+            <h1 className="text-xl font-semibold text-slate-950">
+              Profile unavailable
+            </h1>
 
-    setSkillInput("");
-  };
+            <p className="mt-2 text-sm text-slate-500">
+              {error || "This student profile could not be loaded."}
+            </p>
 
-  const removeSkill = (skillToRemove: string) => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      skills: previousProfile.skills.filter(
-        (skill) => skill !== skillToRemove
-      ),
-    }));
-  };
+            <button
+              type="button"
+              onClick={() => navigate("/discover")}
+              className="mt-6 rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+            >
+              Back to Discover
+            </button>
+          </div>
+        </main>
 
-  const addInterest = () => {
-    const interest = interestInput.trim();
-
-    if (!interest) {
-      return;
-    }
-
-    const alreadyExists = profile.interests.some(
-      (existingInterest) =>
-        existingInterest.toLowerCase() ===
-        interest.toLowerCase()
+        <Footer />
+      </div>
     );
-
-    if (alreadyExists) {
-      setInterestInput("");
-      return;
-    }
-
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      interests: [...previousProfile.interests, interest],
-    }));
-
-    setInterestInput("");
-  };
-
-  const removeInterest = (interestToRemove: string) => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      interests: previousProfile.interests.filter(
-        (interest) => interest !== interestToRemove
-      ),
-    }));
-  };
-
-  const handleProjectChange = (
-    id: number,
-    field: keyof Project,
-    value: string
-  ) => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      projects: previousProfile.projects.map((project) =>
-        project.id === id
-          ? {
-              ...project,
-              [field]: value,
-            }
-          : project
-      ),
-    }));
-  };
-
-  const addProject = () => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      projects: [
-        ...previousProfile.projects,
-        createEmptyProject(),
-      ],
-    }));
-  };
-
-  const removeProject = (id: number) => {
-    setProfile((previousProfile) => ({
-      ...previousProfile,
-      projects: previousProfile.projects.filter(
-        (project) => project.id !== id
-      ),
-    }));
-  };
-
-  const formatErrorMessage = (error: unknown): string => {
-    if (!axios.isAxiosError(error)) {
-      return "Something went wrong. Please try again.";
-    }
-
-    const responseData = error.response?.data;
-    const detail = responseData?.detail;
-
-    // FastAPI validation errors
-    if (Array.isArray(detail)) {
-      return detail
-        .map((item: any) => {
-          if (typeof item === "string") {
-            return item;
-          }
-
-          if (item && typeof item === "object") {
-            const field = Array.isArray(item.loc)
-              ? item.loc.join(".")
-              : "field";
-
-            const message =
-              typeof item.msg === "string"
-                ? item.msg
-                : JSON.stringify(item);
-
-            return `${field}: ${message}`;
-          }
-
-          return String(item);
-        })
-        .join("\n");
-    }
-
-    // Normal string error
-    if (typeof detail === "string") {
-      return detail;
-    }
-
-    // Object error
-    if (detail && typeof detail === "object") {
-      return Object.entries(detail)
-        .map(([key, value]) => {
-          if (typeof value === "string") {
-            return `${key}: ${value}`;
-          }
-
-          return `${key}: ${JSON.stringify(value)}`;
-        })
-        .join("\n");
-    }
-
-    // Other backend response
-    if (
-      responseData &&
-      typeof responseData === "object"
-    ) {
-      if (
-        "message" in responseData &&
-        typeof responseData.message === "string"
-      ) {
-        return responseData.message;
-      }
-
-      return JSON.stringify(responseData, null, 2);
-    }
-
-    return "Unable to create/update profile. Please try again.";
-  };
-
-  const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
-    event.preventDefault();
-
-    if (!profile.name.trim()) {
-      alert("Please enter your name.");
-      return;
-    }
-
-    if (!profile.email.trim()) {
-      alert("Please enter your email.");
-      return;
-    }
-
-    if (!profile.phone.trim()) {
-      alert("Please enter your phone number.");
-      return;
-    }
-
-    if (!profile.institution.trim()) {
-      alert("Please select your university or college.");
-      return;
-    }
-
-    if (!profile.degree.trim()) {
-      alert("Please enter your degree.");
-      return;
-    }
-
-    if (!profile.year.trim()) {
-      alert("Please select your year.");
-      return;
-    }
-
-    if (profile.skills.length === 0) {
-      alert("Please add at least one skill.");
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const token = localStorage.getItem(
-        "talentos_access_token"
-      );
-
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      const authHeaders = {
-        Authorization: `Bearer ${token}`,
-      };
-
-      // Clean the project data before sending
-      const cleanedProjects = profile.projects
-        .filter(
-          (project) =>
-            project.name.trim() ||
-            project.description.trim() ||
-            project.technologies.trim()
-        )
-        .map((project) => ({
-          name: project.name.trim(),
-          description: project.description.trim(),
-          technologies: project.technologies.trim(),
-        }));
-
-      const payload = {
-        name: profile.name.trim(),
-        email: profile.email.trim(),
-        phone: profile.phone.trim(),
-        institution: profile.institution.trim(),
-        degree: profile.degree.trim(),
-        year: profile.year.trim(),
-        about: profile.about.trim(),
-        skills: profile.skills.map((skill) => skill.trim()),
-        interests: profile.interests.map((interest) =>
-          interest.trim()
-        ),
-        projects: cleanedProjects,
-        availability: profile.availability,
-      };
-
-      let response;
-
-      if (isEditing && profileId) {
-        response = await axios.put(
-          `${API_URL}/profiles/${profileId}`,
-          payload,
-          {
-            headers: authHeaders,
-          }
-        );
-
-        alert("Profile updated successfully!");
-      } else {
-        response = await axios.post(
-          `${API_URL}/profiles`,
-          payload,
-          {
-            headers: authHeaders,
-          }
-        );
-
-        const newProfileId = response.data.profile.id;
-
-        setProfileId(newProfileId);
-        setIsEditing(true);
-
-        try {
-          const cachedUserRaw = localStorage.getItem("talentos_user");
-          const cachedUser = cachedUserRaw
-            ? JSON.parse(cachedUserRaw)
-            : {};
-
-          localStorage.setItem(
-            "talentos_user",
-            JSON.stringify({
-              ...cachedUser,
-              profile_id: newProfileId,
-            })
-          );
-
-          sessionStorage.setItem(
-            `talentos_profile_${newProfileId}`,
-            JSON.stringify(response.data.profile)
-          );
-        } catch {
-          // Cache is only an optimization.
-        }
-
-        alert("Profile created successfully!");
-      }
-
-      if (isEditing && profileId) {
-        try {
-          sessionStorage.setItem(
-            `talentos_profile_${profileId}`,
-            JSON.stringify(response.data.profile ?? response.data)
-          );
-        } catch {
-          // Cache failure must never affect a successful update.
-        }
-      }
-
-      console.log("Profile response:", response.data);
-    } catch (error) {
-      console.error("Profile request failed:", error);
-
-      if (
-        axios.isAxiosError(error) &&
-        error.response?.status === 401
-      ) {
-        localStorage.removeItem("talentos_access_token");
-        navigate("/login");
-        return;
-      }
-
-      const message = formatErrorMessage(error);
-
-      alert(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
-        <div className="max-w-2xl">
-          <p className="text-sm font-medium text-slate-500">
-            TalentOS
-          </p>
+      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-            {isEditing
-              ? "Update your profile"
-              : "Create your profile"}
-          </h1>
-
-          <p className="mt-4 leading-7 text-slate-600">
-            Tell other students about your skills, interests and
-            projects so TalentOS can help find relevant teammates.
-          </p>
-        </div>
-
-        <form
-          onSubmit={handleSubmit}
-          className="mt-8 space-y-6"
+        {/* BACK BUTTON */}
+        <button
+          type="button"
+          onClick={() => navigate("/discover")}
+          className="mb-6 text-sm font-medium text-slate-600 hover:text-slate-950"
         >
-          {/* BASIC INFORMATION */}
+          ← Back to Discover
+        </button>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Basic information
-            </h2>
+        {/* PROFILE HEADER */}
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
 
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="name"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Full name
-                </label>
-
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  value={profile.name}
-                  onChange={handleChange}
-                  placeholder="Enter your name"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="institution"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  University / College
-                </label>
-
-                <select
-                  id="institution"
-                  name="institution"
-                  value={profile.institution}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
-                >
-                  <option value="">
-                    Select your university / college
-                  </option>
-                  <option value="BBD University">
-                    BBD University
-                  </option>
-                  <option value="University of Lucknow">
-                    University of Lucknow
-                  </option>
-                  <option value="Dr. A.P.J. Abdul Kalam Technical University">
-                    Dr. A.P.J. Abdul Kalam Technical University
-                  </option>
-                  <option value="Integral University">
-                    Integral University
-                  </option>
-                  <option value="Amity University Lucknow">
-                    Amity University Lucknow
-                  </option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div>
-                <label
-                  htmlFor="degree"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Degree
-                </label>
-
-                <input
-                  id="degree"
-                  name="degree"
-                  type="text"
-                  value={profile.degree}
-                  onChange={handleChange}
-                  placeholder="B.Tech Computer Science - AI"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="year"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Year
-                </label>
-
-                <select
-                  id="year"
-                  name="year"
-                  value={profile.year}
-                  onChange={handleChange}
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
-                >
-                  <option value="">Select year</option>
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                  <option value="3rd Year">3rd Year</option>
-                  <option value="4th Year">4th Year</option>
-                </select>
-              </div>
-            </div>
-          </section>
-
-          {/* CONTACT INFORMATION */}
-
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Contact information
-            </h2>
-
-            <div className="mt-5 grid gap-5 sm:grid-cols-2">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Email
-                </label>
-
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={profile.email}
-                  onChange={handleChange}
-                  placeholder="you@example.com"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="phone"
-                  className="text-sm font-medium text-slate-900"
-                >
-                  Phone number
-                </label>
-
-                <input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  value={profile.phone}
-                  onChange={handleChange}
-                  placeholder="+91 9876543210"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* ABOUT */}
-
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              About you
-            </h2>
-
-            <textarea
-              name="about"
-              value={profile.about}
-              onChange={handleChange}
-              rows={5}
-              placeholder="Tell us about yourself, your experience and what you like building..."
-              className="mt-4 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-            />
-          </section>
-
-          {/* SKILLS */}
-
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Skills
-            </h2>
-
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <input
-                type="text"
-                value={skillInput}
-                onChange={(event) =>
-                  setSkillInput(event.target.value)
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    addSkill();
-                  }
-                }}
-                placeholder="e.g. Python"
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-              />
-
-              <button
-                type="button"
-                onClick={addSkill}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                Add skill
-              </button>
+            {/* Avatar */}
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-3xl font-bold text-white">
+              {profile.name
+                ? profile.name.charAt(0).toUpperCase()
+                : "S"}
             </div>
 
-            {profile.skills.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-2">
-                {profile.skills.map((skill) => (
-                  <span
-                    key={skill}
-                    className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
-                  >
-                    {skill}
+            <div className="flex-1">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
 
-                    <button
-                      type="button"
-                      onClick={() => removeSkill(skill)}
-                      className="font-medium text-slate-400 hover:text-red-500"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+                    {profile.name}
+                  </h1>
+
+                  <p className="mt-2 text-slate-600">
+                    {profile.degree}
+                  </p>
+
+                  <p className="mt-1 text-sm text-slate-500">
+                    {profile.institution}
+                    {profile.year
+                      ? ` • ${profile.year}`
+                      : ""}
+                  </p>
+                </div>
+
+                <span
+                  className={`inline-flex w-fit rounded-full px-3 py-1.5 text-xs font-medium ${
+                    profile.availability === "Available" ||
+                    profile.availability === "Looking for team"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {profile.availability}
+                </span>
               </div>
-            )}
-          </section>
-
-          {/* INTERESTS */}
-
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Interests
-            </h2>
-
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <input
-                type="text"
-                value={interestInput}
-                onChange={(event) =>
-                  setInterestInput(event.target.value)
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    addInterest();
-                  }
-                }}
-                placeholder="e.g. Artificial Intelligence"
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-              />
-
-              <button
-                type="button"
-                onClick={addInterest}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
-              >
-                Add interest
-              </button>
             </div>
+          </div>
+        </section>
 
-            {profile.interests.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-2">
-                {profile.interests.map((interest) => (
-                  <span
-                    key={interest}
-                    className="flex items-center gap-2 rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-700"
-                  >
-                    {interest}
+        {/* ABOUT */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-semibold text-slate-950">
+            About
+          </h2>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        removeInterest(interest)
-                      }
-                      className="font-medium text-slate-400 hover:text-red-500"
-                    >
-                      ×
-                    </button>
-                  </span>
-                ))}
-              </div>
-            )}
-          </section>
+          <p className="mt-4 whitespace-pre-line leading-7 text-slate-600">
+            {profile.about || "No information provided."}
+          </p>
+        </section>
 
-          {/* PROJECTS */}
+        {/* SKILLS */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Skills
+          </h2>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-950">
-                  Projects
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Add projects you have worked on.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={addProject}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
-              >
-                Add project
-              </button>
+          {profile.skills.length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {profile.skills.map((skill, index) => (
+                <span
+                  key={`${skill}-${index}`}
+                  className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700"
+                >
+                  {skill}
+                </span>
+              ))}
             </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">
+              No skills added.
+            </p>
+          )}
+        </section>
 
-            <div className="mt-6 space-y-5">
+        {/* INTERESTS */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Interests
+          </h2>
+
+          {profile.interests.length > 0 ? (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {profile.interests.map((interest, index) => (
+                <span
+                  key={`${interest}-${index}`}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                >
+                  {interest}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">
+              No interests added.
+            </p>
+          )}
+        </section>
+
+        {/* PROJECTS */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Projects
+          </h2>
+
+          {profile.projects.length > 0 ? (
+            <div className="mt-5 space-y-4">
               {profile.projects.map((project, index) => (
                 <div
-                  key={project.id}
-                  className="rounded-lg border border-slate-200 p-5"
+                  key={project.id || index}
+                  className="rounded-xl border border-slate-200 p-5"
                 >
-                  <div className="flex items-center justify-between">
-                    <h3 className="font-medium text-slate-900">
-                      Project {index + 1}
-                    </h3>
+                  <h3 className="text-base font-semibold text-slate-950">
+                    {project.name || `Project ${index + 1}`}
+                  </h3>
 
-                    {profile.projects.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          removeProject(project.id)
-                        }
-                        className="text-sm text-red-500 hover:text-red-700"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
+                  {project.description && (
+                    <p className="mt-2 leading-6 text-slate-600">
+                      {project.description}
+                    </p>
+                  )}
 
-                  <div className="mt-4 space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-slate-900">
-                        Project name
-                      </label>
-
-                      <input
-                        type="text"
-                        value={project.name}
-                        onChange={(event) =>
-                          handleProjectChange(
-                            project.id,
-                            "name",
-                            event.target.value
-                          )
-                        }
-                        placeholder="AI Resume Analyzer"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-slate-900">
-                        Description
-                      </label>
-
-                      <textarea
-                        value={project.description}
-                        onChange={(event) =>
-                          handleProjectChange(
-                            project.id,
-                            "description",
-                            event.target.value
-                          )
-                        }
-                        rows={4}
-                        placeholder="Describe what you built..."
-                        className="mt-2 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-sm font-medium text-slate-900">
+                  {project.technologies && (
+                    <div className="mt-4">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                         Technologies
-                      </label>
+                      </p>
 
-                      <input
-                        type="text"
-                        value={project.technologies}
-                        onChange={(event) =>
-                          handleProjectChange(
-                            project.id,
-                            "technologies",
-                            event.target.value
-                          )
-                        }
-                        placeholder="Python, FastAPI, React"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
-                      />
+                      <p className="mt-1 text-sm text-slate-600">
+                        {project.technologies}
+                      </p>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
-          </section>
+          ) : (
+            <p className="mt-4 text-sm text-slate-500">
+              No projects added.
+            </p>
+          )}
+        </section>
 
-          {/* AVAILABILITY */}
+        {/* CONTACT */}
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Contact
+          </h2>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
-              Availability
-            </h2>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
 
-            <select
-              name="availability"
-              value={profile.availability}
-              onChange={handleChange}
-              className="mt-4 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
-            >
-              <option value="Available">Available</option>
-              <option value="Busy">Busy</option>
-              <option value="Looking for team">
-                Looking for team
-              </option>
-            </select>
-          </section>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Email
+              </p>
 
-          {/* SUBMIT */}
+              <p className="mt-1 break-all text-sm text-slate-700">
+                {profile.email || "Not provided"}
+              </p>
+            </div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={loading || loadingProfile}
-              className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {loadingProfile
-                ? "Checking profile..."
-                : loading
-                  ? isEditing
-                    ? "Updating profile..."
-                    : "Creating profile..."
-                  : isEditing
-                    ? "Update profile"
-                    : "Create profile"}
-            </button>
+            <div className="rounded-xl bg-slate-50 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                Phone
+              </p>
+
+              <p className="mt-1 text-sm text-slate-700">
+                {profile.phone || "Not provided"}
+              </p>
+            </div>
+
           </div>
-        </form>
+        </section>
+
       </main>
 
       <Footer />
@@ -1076,4 +407,4 @@ function CreateProfile() {
   );
 }
 
-export default CreateProfile;
+export default StudentProfile;
