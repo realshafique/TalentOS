@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -92,10 +92,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
-# =========================================================
-# CORS
-# =========================================================
 
 # =========================================================
 # CORS
@@ -318,20 +314,70 @@ def get_me(
 
 
 # =========================================================
+# BACKGROUND VECTOR INDEXING
+# =========================================================
+
+def index_profile_in_background(
+    profile_id: int,
+    profile: ProfileCreate,
+):
+    """Generate the Jina embedding and update Qdrant after the HTTP response.
+
+    Profile creation should not make the user wait for external AI/vector
+    services. If indexing fails, the PostgreSQL profile remains intact.
+    """
+
+    try:
+        print(f"Starting vector indexing for profile {profile_id}...")
+
+        profile_text, embedding = create_profile_embedding(profile)
+
+        qdrant_point = PointStruct(
+            id=profile_id,
+            vector=embedding,
+            payload={
+                "profile_id": profile_id,
+                "name": profile.name,
+                "email": profile.email,
+                "phone": profile.phone,
+                "institution": profile.institution,
+                "degree": profile.degree,
+                "year": profile.year,
+                "skills": profile.skills,
+                "interests": profile.interests,
+                "availability": profile.availability,
+                "profile": profile_text,
+            },
+        )
+
+        client.upsert(
+            collection_name=COLLECTION_NAME,
+            points=[qdrant_point],
+        )
+
+        print(f"Vector indexing completed for profile {profile_id}.")
+
+    except Exception as e:
+        # Do not break profile creation if Jina/Qdrant temporarily fails.
+        print(
+            f"Vector indexing failed for profile {profile_id}: "
+            f"{type(e).__name__}: {e}"
+        )
+
+
+# =========================================================
 # CREATE PROFILE
 # =========================================================
 
 @app.post("/profiles")
 def create_profile(
     profile: ProfileCreate,
-
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-
     db: Session = Depends(get_db),
 ):
 
     # Check if this account already owns a profile.
-
     existing_user_profile = (
         db.query(Profile)
         .filter(Profile.user_id == current_user.id)
@@ -339,14 +385,12 @@ def create_profile(
     )
 
     if existing_user_profile:
-
         raise HTTPException(
             status_code=400,
             detail="This account already has a profile.",
         )
 
     # Check duplicate email.
-
     existing_profile = (
         db.query(Profile)
         .filter(Profile.email == profile.email)
@@ -354,7 +398,6 @@ def create_profile(
     )
 
     if existing_profile:
-
         raise HTTPException(
             status_code=400,
             detail="A profile with this email already exists.",
@@ -362,131 +405,62 @@ def create_profile(
 
     new_profile = Profile(
         user_id=current_user.id,
-
         name=profile.name,
-
         email=profile.email,
-
         phone=profile.phone,
-
         institution=profile.institution,
-
         degree=profile.degree,
-
         year=profile.year,
-
         about=profile.about,
-
         skills=", ".join(profile.skills),
-
         interests=", ".join(profile.interests),
-
         availability=profile.availability,
     )
 
     db.add(new_profile)
-
     db.flush()
 
     for project in profile.projects:
-
-        new_project = Project(
-            profile_id=new_profile.id,
-
-            name=project.name,
-
-            description=project.description,
-
-            technologies=project.technologies,
+        db.add(
+            Project(
+                profile_id=new_profile.id,
+                name=project.name,
+                description=project.description,
+                technologies=project.technologies,
+            )
         )
 
-        db.add(new_project)
-
     db.commit()
-
     db.refresh(new_profile)
 
-    # Create embedding
-
-    profile_text, embedding = create_profile_embedding(
-        profile
-    )
-
-    # Create Qdrant point
-
-    qdrant_point = PointStruct(
-        id=new_profile.id,
-
-        vector=embedding,
-
-        payload={
-            "profile_id": new_profile.id,
-
-            "name": new_profile.name,
-
-            "email": new_profile.email,
-
-            "phone": new_profile.phone,
-
-            "institution": new_profile.institution,
-
-            "degree": new_profile.degree,
-
-            "year": new_profile.year,
-
-            "skills": profile.skills,
-
-            "interests": profile.interests,
-
-            "availability": profile.availability,
-
-            "profile": profile_text,
-        },
-    )
-
-    client.upsert(
-        collection_name=COLLECTION_NAME,
-
-        points=[qdrant_point],
+    # IMPORTANT: do not wait for Jina AI or Qdrant.
+    background_tasks.add_task(
+        index_profile_in_background,
+        new_profile.id,
+        profile,
     )
 
     return {
         "message": "Profile created successfully",
-
         "profile": {
             "id": new_profile.id,
-
             "name": new_profile.name,
-
             "email": new_profile.email,
-
             "phone": new_profile.phone,
-
             "institution": new_profile.institution,
-
             "degree": new_profile.degree,
-
             "year": new_profile.year,
-
             "about": new_profile.about,
-
             "skills": profile.skills,
-
             "interests": profile.interests,
-
             "availability": profile.availability,
-
             "projects": [
                 {
                     "id": project.id,
-
                     "name": project.name,
-
                     "description": project.description,
-
                     "technologies": project.technologies,
                 }
-
                 for project in new_profile.projects
             ],
         },
@@ -502,70 +476,59 @@ def get_profiles(
     db: Session = Depends(get_db),
 ):
 
-    profiles = (
-        db.query(Profile)
+    profiles = db.query(Profile).all()
+
+    if not profiles:
+        return []
+
+    # Fetch projects once instead of one query per profile (N+1 problem).
+    profile_ids = [profile.id for profile in profiles]
+
+    all_projects = (
+        db.query(Project)
+        .filter(Project.profile_id.in_(profile_ids))
         .all()
     )
+
+    projects_by_profile = {}
+
+    for project in all_projects:
+        projects_by_profile.setdefault(
+            project.profile_id, []
+        ).append(project)
 
     results = []
 
     for profile in profiles:
-
-        projects = (
-            db.query(Project)
-            .filter(
-                Project.profile_id == profile.id
-            )
-            .all()
-        )
+        projects = projects_by_profile.get(profile.id, [])
 
         results.append({
-
             "id": profile.id,
-
             "name": profile.name,
-
             "email": profile.email,
-
             "phone": profile.phone,
-
             "institution": profile.institution,
-
             "degree": profile.degree,
-
             "year": profile.year,
-
             "about": profile.about,
-
             "skills": [
                 skill.strip()
-
                 for skill in profile.skills.split(",")
-
                 if skill.strip()
             ] if profile.skills else [],
-
             "interests": [
                 interest.strip()
-
                 for interest in profile.interests.split(",")
-
                 if interest.strip()
             ] if profile.interests else [],
-
             "availability": profile.availability,
-
             "projects": [
                 {
                     "id": project.id,
-
                     "name": project.name,
-
                     "description": project.description,
-
                     "technologies": project.technologies,
                 }
-
                 for project in projects
             ],
         })
@@ -670,200 +633,103 @@ def get_profile(
 @app.put("/profiles/{profile_id}")
 def update_profile(
     profile_id: int,
-
     profile: ProfileCreate,
-
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
-
     db: Session = Depends(get_db),
 ):
 
     existing_profile = (
         db.query(Profile)
-
         .filter(Profile.id == profile_id)
-
         .first()
     )
 
     if not existing_profile:
-
         raise HTTPException(
             status_code=404,
-
             detail="Student profile not found.",
         )
 
-    # Ownership check
-
     if existing_profile.user_id != current_user.id:
-
         raise HTTPException(
             status_code=403,
-
             detail="You are not authorized to edit this profile.",
         )
 
     duplicate_email = (
         db.query(Profile)
-
         .filter(
             Profile.email == profile.email,
-
             Profile.id != profile_id,
         )
-
         .first()
     )
 
     if duplicate_email:
-
         raise HTTPException(
             status_code=400,
-
             detail="Another profile with this email already exists.",
         )
 
     existing_profile.name = profile.name
-
     existing_profile.email = profile.email
-
     existing_profile.phone = profile.phone
-
     existing_profile.institution = profile.institution
-
     existing_profile.degree = profile.degree
-
     existing_profile.year = profile.year
-
     existing_profile.about = profile.about
+    existing_profile.skills = ", ".join(profile.skills)
+    existing_profile.interests = ", ".join(profile.interests)
+    existing_profile.availability = profile.availability
 
-    existing_profile.skills = ", ".join(
-        profile.skills
-    )
-
-    existing_profile.interests = ", ".join(
-        profile.interests
-    )
-
-    existing_profile.availability = (
-        profile.availability
-    )
-
-    # Delete old projects
-
+    # Replace projects in one transaction.
     for project in list(existing_profile.projects):
-
         db.delete(project)
 
     db.flush()
 
-    # Add new projects
-
     for project in profile.projects:
-
-        new_project = Project(
-
-            profile_id=existing_profile.id,
-
-            name=project.name,
-
-            description=project.description,
-
-            technologies=project.technologies,
+        db.add(
+            Project(
+                profile_id=existing_profile.id,
+                name=project.name,
+                description=project.description,
+                technologies=project.technologies,
+            )
         )
 
-        db.add(new_project)
-
     db.commit()
-
     db.refresh(existing_profile)
 
-    # Re-create embedding
-
-    profile_text, embedding = create_profile_embedding(
-        profile
-    )
-
-    qdrant_point = PointStruct(
-
-        id=existing_profile.id,
-
-        vector=embedding,
-
-        payload={
-
-            "profile_id": existing_profile.id,
-
-            "name": existing_profile.name,
-
-            "email": existing_profile.email,
-
-            "phone": existing_profile.phone,
-
-            "institution": existing_profile.institution,
-
-            "degree": existing_profile.degree,
-
-            "year": existing_profile.year,
-
-            "skills": profile.skills,
-
-            "interests": profile.interests,
-
-            "availability": profile.availability,
-
-            "profile": profile_text,
-        },
-    )
-
-    client.upsert(
-
-        collection_name=COLLECTION_NAME,
-
-        points=[qdrant_point],
+    # Re-index asynchronously so the user does not wait for Jina/Qdrant.
+    background_tasks.add_task(
+        index_profile_in_background,
+        existing_profile.id,
+        profile,
     )
 
     return {
-
         "message": "Profile updated successfully",
-
         "profile": {
-
             "id": existing_profile.id,
-
             "name": existing_profile.name,
-
             "email": existing_profile.email,
-
             "phone": existing_profile.phone,
-
             "institution": existing_profile.institution,
-
             "degree": existing_profile.degree,
-
             "year": existing_profile.year,
-
             "about": existing_profile.about,
-
             "skills": profile.skills,
-
             "interests": profile.interests,
-
             "availability": profile.availability,
-
             "projects": [
-
                 {
                     "id": project.id,
-
                     "name": project.name,
-
                     "description": project.description,
-
                     "technologies": project.technologies,
                 }
-
                 for project in existing_profile.projects
             ],
         },
