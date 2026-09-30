@@ -28,12 +28,14 @@ function Teams() {
 
   const [loading, setLoading] = useState(false);
 
-  // Get the same token that Login.tsx stores
+  // =========================================================
+  // AUTH
+  // =========================================================
+
   const getToken = () => {
     return localStorage.getItem("talentos_access_token");
   };
 
-  // Authentication configuration for protected API requests
   const getAuthConfig = () => {
     const token = getToken();
 
@@ -44,11 +46,15 @@ function Teams() {
     };
   };
 
-  // Fetch all teams
+  // =========================================================
+  // FETCH TEAMS
+  // =========================================================
+
   const fetchTeams = async () => {
     try {
       const response = await axios.get(
-        `${API_URL}/teams`
+        `${API_URL}/teams`,
+        getAuthConfig()
       );
 
       setTeams(response.data || []);
@@ -65,6 +71,20 @@ function Teams() {
           "Response:",
           error.response?.data
         );
+
+        if (error.response?.status === 401) {
+          alert(
+            "Your login session has expired. Please login again."
+          );
+
+          localStorage.removeItem(
+            "talentos_access_token"
+          );
+
+          localStorage.removeItem(
+            "talentos_user"
+          );
+        }
       }
     }
   };
@@ -73,7 +93,10 @@ function Teams() {
     fetchTeams();
   }, []);
 
-  // Create team
+  // =========================================================
+  // CREATE TEAM
+  // =========================================================
+
   const handleCreateTeam = async (
     event: React.FormEvent<HTMLFormElement>
   ) => {
@@ -154,7 +177,10 @@ function Teams() {
     }
   };
 
-  // Delete team
+  // =========================================================
+  // DELETE TEAM
+  // =========================================================
+
   const handleDeleteTeam = async (
     teamId: number
   ) => {
@@ -208,6 +234,91 @@ function Teams() {
       }
     }
   };
+
+  // =========================================================
+  // REMOVE INDIVIDUAL TEAM MEMBER
+  // =========================================================
+
+  const handleRemoveMember = async (
+    teamId: number,
+    memberId: number,
+    memberName: string
+  ) => {
+    const token = getToken();
+
+    if (!token) {
+      alert(
+        "Please login before removing a team member."
+      );
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to remove ${memberName} from this team?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      await axios.delete(
+        `${API_URL}/teams/${teamId}/members/${memberId}`,
+        getAuthConfig()
+      );
+
+      // Update UI immediately
+      setTeams((previousTeams) =>
+        previousTeams.map((team) =>
+          team.id === teamId
+            ? {
+                ...team,
+                members: team.members.filter(
+                  (member) =>
+                    member.id !== memberId
+                ),
+              }
+            : team
+        )
+      );
+
+      alert(
+        `${memberName} was removed from the team.`
+      );
+    } catch (error) {
+      console.error(
+        "Failed to remove team member:",
+        error
+      );
+
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          alert(
+            "Your login session has expired. Please login again."
+          );
+
+          localStorage.removeItem(
+            "talentos_access_token"
+          );
+
+          localStorage.removeItem(
+            "talentos_user"
+          );
+        } else {
+          alert(
+            error.response?.data?.detail ||
+              "Failed to remove team member."
+          );
+        }
+      } else {
+        alert("Failed to remove team member.");
+      }
+    }
+  };
+
+  // =========================================================
+  // UI
+  // =========================================================
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -287,7 +398,6 @@ function Teams() {
             </button>
 
           </form>
-
         </section>
 
         {/* TEAMS */}
@@ -333,6 +443,8 @@ function Teams() {
                   className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
                 >
 
+                  {/* TEAM HEADER */}
+
                   <div className="flex items-start justify-between gap-4">
 
                     <div>
@@ -359,6 +471,8 @@ function Teams() {
 
                   </div>
 
+                  {/* MEMBERS */}
+
                   <div className="mt-5">
 
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -380,22 +494,44 @@ function Teams() {
 
                             <div
                               key={member.id}
-                              className="rounded-lg bg-slate-50 px-4 py-3"
+                              className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-4 py-3"
                             >
 
-                              <p className="text-sm font-medium text-slate-900">
-                                {member.name}
-                              </p>
+                              {/* MEMBER INFO */}
 
-                              <p className="mt-1 text-xs text-slate-500">
-                                {member.degree}
-                              </p>
+                              <div className="min-w-0">
 
-                              {member.role && (
-                                <p className="mt-1 text-xs text-slate-400">
-                                  {member.role}
+                                <p className="text-sm font-medium text-slate-900">
+                                  {member.name}
                                 </p>
-                              )}
+
+                                <p className="mt-1 text-xs text-slate-500">
+                                  {member.degree}
+                                </p>
+
+                                {member.role && (
+                                  <p className="mt-1 text-xs text-slate-400">
+                                    {member.role}
+                                  </p>
+                                )}
+
+                              </div>
+
+                              {/* REMOVE BUTTON */}
+
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleRemoveMember(
+                                    team.id,
+                                    member.id,
+                                    member.name
+                                  )
+                                }
+                                className="shrink-0 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                              >
+                                Remove
+                              </button>
 
                             </div>
 
