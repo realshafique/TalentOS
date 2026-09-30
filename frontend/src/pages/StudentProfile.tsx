@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
-import API_URL from "../api";
+import API_URL from "../config";
 
 type Project = {
   id?: number;
