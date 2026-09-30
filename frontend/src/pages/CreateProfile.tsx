@@ -65,7 +65,7 @@ function CreateProfile() {
   const [interestInput, setInterestInput] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
 
@@ -100,11 +100,11 @@ function CreateProfile() {
         const id = Number(currentUser.profile_id);
         setProfileId(id);
 
-        const response = await axios.get(`${API_URL}/profiles`);
-
-        const existingProfile = response.data.find(
-          (item: any) => item.id === id
+        const response = await axios.get(
+          `${API_URL}/profiles/${id}`
         );
+
+        const existingProfile = response.data;
 
         if (existingProfile) {
           const projects: Project[] =
