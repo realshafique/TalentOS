@@ -107,6 +107,7 @@ app.add_middleware(
         "https://talentos-sooty.vercel.app",
 
         "https://frontend-beta-dusky-o2tamwnlh1.vercel.app",
+        "https://frontend-beta-dusky-o2tamwnlh1.vercel.app",
     ],
 
     allow_credentials=True,
