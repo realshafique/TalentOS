@@ -27,6 +27,13 @@ type Profile = {
   availability: string;
 };
 
+const createEmptyProject = (): Project => ({
+  id: Date.now(),
+  name: "",
+  description: "",
+  technologies: "",
+});
+
 const emptyProfile: Profile = {
   name: "",
   email: "",
@@ -52,7 +59,6 @@ function CreateProfile() {
   const navigate = useNavigate();
 
   const [profile, setProfile] = useState<Profile>(emptyProfile);
-
   const [profileId, setProfileId] = useState<number | null>(null);
 
   const [skillInput, setSkillInput] = useState("");
@@ -79,7 +85,9 @@ function CreateProfile() {
 
         const meResponse = await axios.get(
           `${API_URL}/auth/me`,
-          { headers: authHeaders }
+          {
+            headers: authHeaders,
+          }
         );
 
         const currentUser = meResponse.data;
@@ -93,11 +101,33 @@ function CreateProfile() {
         setProfileId(id);
 
         const response = await axios.get(`${API_URL}/profiles`);
+
         const existingProfile = response.data.find(
           (item: any) => item.id === id
         );
 
         if (existingProfile) {
+          const projects: Project[] =
+            Array.isArray(existingProfile.projects)
+              ? existingProfile.projects.map(
+                  (project: any, index: number) => ({
+                    id: Number(project.id) || Date.now() + index,
+                    name:
+                      typeof project.name === "string"
+                        ? project.name
+                        : "",
+                    description:
+                      typeof project.description === "string"
+                        ? project.description
+                        : "",
+                    technologies:
+                      typeof project.technologies === "string"
+                        ? project.technologies
+                        : "",
+                  })
+                )
+              : [];
+
           setProfile({
             name: existingProfile.name || "",
             email: existingProfile.email || "",
@@ -106,21 +136,38 @@ function CreateProfile() {
             degree: existingProfile.degree || "",
             year: existingProfile.year || "",
             about: existingProfile.about || "",
+
             skills: Array.isArray(existingProfile.skills)
-              ? existingProfile.skills
-              : existingProfile.skills
-                ? existingProfile.skills.split(",").map((skill: string) => skill.trim()).filter(Boolean)
+              ? existingProfile.skills.filter(
+                  (skill: unknown): skill is string =>
+                    typeof skill === "string"
+                )
+              : typeof existingProfile.skills === "string"
+                ? existingProfile.skills
+                    .split(",")
+                    .map((skill: string) => skill.trim())
+                    .filter(Boolean)
                 : [],
+
             interests: Array.isArray(existingProfile.interests)
-              ? existingProfile.interests
-              : existingProfile.interests
-                ? existingProfile.interests.split(",").map((interest: string) => interest.trim()).filter(Boolean)
+              ? existingProfile.interests.filter(
+                  (interest: unknown): interest is string =>
+                    typeof interest === "string"
+                )
+              : typeof existingProfile.interests === "string"
+                ? existingProfile.interests
+                    .split(",")
+                    .map((interest: string) => interest.trim())
+                    .filter(Boolean)
                 : [],
+
             projects:
-              existingProfile.projects && existingProfile.projects.length > 0
-                ? existingProfile.projects
-                : [{ id: Date.now(), name: "", description: "", technologies: "" }],
-            availability: existingProfile.availability || "Available",
+              projects.length > 0
+                ? projects
+                : [createEmptyProject()],
+
+            availability:
+              existingProfile.availability || "Available",
           });
 
           setIsEditing(true);
@@ -128,7 +175,10 @@ function CreateProfile() {
       } catch (error) {
         console.error("Failed to load profile:", error);
 
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
+        if (
+          axios.isAxiosError(error) &&
+          error.response?.status === 401
+        ) {
           localStorage.removeItem("talentos_access_token");
           navigate("/login");
           return;
@@ -246,12 +296,7 @@ function CreateProfile() {
       ...previousProfile,
       projects: [
         ...previousProfile.projects,
-        {
-          id: Date.now(),
-          name: "",
-          description: "",
-          technologies: "",
-        },
+        createEmptyProject(),
       ],
     }));
   };
@@ -263,6 +308,76 @@ function CreateProfile() {
         (project) => project.id !== id
       ),
     }));
+  };
+
+  const formatErrorMessage = (error: unknown): string => {
+    if (!axios.isAxiosError(error)) {
+      return "Something went wrong. Please try again.";
+    }
+
+    const responseData = error.response?.data;
+    const detail = responseData?.detail;
+
+    // FastAPI validation errors
+    if (Array.isArray(detail)) {
+      return detail
+        .map((item: any) => {
+          if (typeof item === "string") {
+            return item;
+          }
+
+          if (item && typeof item === "object") {
+            const field = Array.isArray(item.loc)
+              ? item.loc.join(".")
+              : "field";
+
+            const message =
+              typeof item.msg === "string"
+                ? item.msg
+                : JSON.stringify(item);
+
+            return `${field}: ${message}`;
+          }
+
+          return String(item);
+        })
+        .join("\n");
+    }
+
+    // Normal string error
+    if (typeof detail === "string") {
+      return detail;
+    }
+
+    // Object error
+    if (detail && typeof detail === "object") {
+      return Object.entries(detail)
+        .map(([key, value]) => {
+          if (typeof value === "string") {
+            return `${key}: ${value}`;
+          }
+
+          return `${key}: ${JSON.stringify(value)}`;
+        })
+        .join("\n");
+    }
+
+    // Other backend response
+    if (
+      responseData &&
+      typeof responseData === "object"
+    ) {
+      if (
+        "message" in responseData &&
+        typeof responseData.message === "string"
+      ) {
+        return responseData.message;
+      }
+
+      return JSON.stringify(responseData, null, 2);
+    }
+
+    return "Unable to create/update profile. Please try again.";
   };
 
   const handleSubmit = async (
@@ -308,7 +423,9 @@ function CreateProfile() {
     try {
       setLoading(true);
 
-      const token = localStorage.getItem("talentos_access_token");
+      const token = localStorage.getItem(
+        "talentos_access_token"
+      );
 
       if (!token) {
         navigate("/login");
@@ -319,57 +436,81 @@ function CreateProfile() {
         Authorization: `Bearer ${token}`,
       };
 
+      // Clean the project data before sending
+      const cleanedProjects = profile.projects
+        .filter(
+          (project) =>
+            project.name.trim() ||
+            project.description.trim() ||
+            project.technologies.trim()
+        )
+        .map((project) => ({
+          name: project.name.trim(),
+          description: project.description.trim(),
+          technologies: project.technologies.trim(),
+        }));
+
+      const payload = {
+        name: profile.name.trim(),
+        email: profile.email.trim(),
+        phone: profile.phone.trim(),
+        institution: profile.institution.trim(),
+        degree: profile.degree.trim(),
+        year: profile.year.trim(),
+        about: profile.about.trim(),
+        skills: profile.skills.map((skill) => skill.trim()),
+        interests: profile.interests.map((interest) =>
+          interest.trim()
+        ),
+        projects: cleanedProjects,
+        availability: profile.availability,
+      };
+
       let response;
 
       if (isEditing && profileId) {
         response = await axios.put(
           `${API_URL}/profiles/${profileId}`,
-          profile,
-          { headers: authHeaders }
+          payload,
+          {
+            headers: authHeaders,
+          }
         );
+
         alert("Profile updated successfully!");
       } else {
         response = await axios.post(
           `${API_URL}/profiles`,
-          profile,
-          { headers: authHeaders }
+          payload,
+          {
+            headers: authHeaders,
+          }
         );
 
         const newProfileId = response.data.profile.id;
+
         setProfileId(newProfileId);
         setIsEditing(true);
+
         alert("Profile created successfully!");
       }
 
-      console.log(response.data);
+      console.log("Profile response:", response.data);
     } catch (error) {
       console.error("Profile request failed:", error);
 
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
+      if (
+        axios.isAxiosError(error) &&
+        error.response?.status === 401
+      ) {
         localStorage.removeItem("talentos_access_token");
         navigate("/login");
         return;
       }
 
-      if (axios.isAxiosError(error)) {
-        const detail = error.response?.data?.detail;
+      const message = formatErrorMessage(error);
 
-        if (Array.isArray(detail)) {
-          const messages = detail
-            .map((item: any) => {
-              const field = Array.isArray(item.loc) ? item.loc.join(".") : "field";
-              return `${field}: ${item.msg}`;
-            })
-            .join("\n");
-          alert(messages);
-        } else if (detail) {
-          alert(detail);
-        } else {
-          alert(isEditing ? "Failed to update profile." : "Failed to create profile.");
-        }
-      } else {
-        alert("Something went wrong.");
-      }
+      alert(message);
     } finally {
       setLoading(false);
     }
@@ -461,12 +602,24 @@ function CreateProfile() {
                   onChange={handleChange}
                   className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
                 >
-                  <option value="">Select your university / college</option>
-                  <option value="BBD University">BBD University</option>
-                  <option value="University of Lucknow">University of Lucknow</option>
-                  <option value="Dr. A.P.J. Abdul Kalam Technical University">Dr. A.P.J. Abdul Kalam Technical University</option>
-                  <option value="Integral University">Integral University</option>
-                  <option value="Amity University Lucknow">Amity University Lucknow</option>
+                  <option value="">
+                    Select your university / college
+                  </option>
+                  <option value="BBD University">
+                    BBD University
+                  </option>
+                  <option value="University of Lucknow">
+                    University of Lucknow
+                  </option>
+                  <option value="Dr. A.P.J. Abdul Kalam Technical University">
+                    Dr. A.P.J. Abdul Kalam Technical University
+                  </option>
+                  <option value="Integral University">
+                    Integral University
+                  </option>
+                  <option value="Amity University Lucknow">
+                    Amity University Lucknow
+                  </option>
                   <option value="Other">Other</option>
                 </select>
               </div>

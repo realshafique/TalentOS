@@ -20,7 +20,7 @@ export default function Login() {
     try {
       const formData = new URLSearchParams();
 
-      formData.append("username", email);
+      formData.append("username", email.trim());
       formData.append("password", password);
 
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -35,16 +35,30 @@ export default function Login() {
 
       if (!response.ok) {
         throw new Error(
-          data.detail || "Invalid email or password."
+          typeof data.detail === "string"
+            ? data.detail
+            : "Invalid email or password."
         );
       }
 
+      if (!data.access_token) {
+        throw new Error("Login succeeded but no access token was returned.");
+      }
+
+      // Always save the access token
       localStorage.setItem(
         "talentos_access_token",
         data.access_token
       );
 
-      if (data.user?.profile_id) {
+      // Remove any old profile ID first
+      localStorage.removeItem("talentos_profile_id");
+
+      // Existing profile
+      if (
+        data.user?.profile_id !== null &&
+        data.user?.profile_id !== undefined
+      ) {
         localStorage.setItem(
           "talentos_profile_id",
           String(data.user.profile_id)
@@ -52,13 +66,16 @@ export default function Login() {
 
         navigate("/profile");
       } else {
+        // New user without a profile
         navigate("/create-profile");
       }
     } catch (error) {
+      console.error("Login failed:", error);
+
       setError(
         error instanceof Error
           ? error.message
-          : "Login failed."
+          : "Login failed. Please try again."
       );
     } finally {
       setLoading(false);
@@ -84,16 +101,14 @@ export default function Login() {
           className="space-y-5"
         >
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="mb-2 block font-medium">
               Email
             </label>
 
             <input
               type="email"
               value={email}
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
               required
               className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
@@ -101,16 +116,14 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block mb-2 font-medium">
+            <label className="mb-2 block font-medium">
               Password
             </label>
 
             <input
               type="password"
               value={password}
-              onChange={(e) =>
-                setPassword(e.target.value)
-              }
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
               className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
@@ -126,7 +139,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-50"
+            className="w-full rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Logging in..." : "Login"}
           </button>
