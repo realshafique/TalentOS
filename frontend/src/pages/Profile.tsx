@@ -149,8 +149,8 @@ function Profile() {
       <div className="min-h-screen bg-slate-50">
         <Navbar />
 
-        <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
+        <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 text-center sm:p-8">
             <p className="text-sm text-slate-500">
               Loading your profile...
             </p>
@@ -167,8 +167,8 @@ function Profile() {
       <div className="min-h-screen bg-slate-50">
         <Navbar />
 
-        <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
+        <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
+          <div className="rounded-xl border border-slate-200 bg-white p-5 text-center sm:p-8">
             <h1 className="text-xl font-semibold text-slate-950">
               No profile found
             </h1>
@@ -196,7 +196,7 @@ function Profile() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+      <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500">
@@ -210,14 +210,14 @@ function Profile() {
 
           <Link
             to="/create-profile"
-            className="inline-block rounded-lg bg-slate-900 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-slate-800"
+            className="inline-block w-full rounded-lg bg-slate-900 px-4 py-2.5 text-center text-sm font-medium text-white transition hover:bg-slate-800 sm:w-auto"
           >
             Edit profile
           </Link>
         </div>
 
         <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
+          <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
             Basic information
           </h2>
 
@@ -226,7 +226,7 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Name
               </p>
-              <p className="mt-1 text-sm text-slate-700">
+              <p className="mt-1 break-words text-sm text-slate-700">
                 {profile.name}
               </p>
             </div>
@@ -235,7 +235,7 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Degree
               </p>
-              <p className="mt-1 text-sm text-slate-700">
+              <p className="mt-1 break-words text-sm text-slate-700">
                 {profile.degree}
               </p>
             </div>
@@ -244,7 +244,7 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Year
               </p>
-              <p className="mt-1 text-sm text-slate-700">
+              <p className="mt-1 break-words text-sm text-slate-700">
                 {profile.year}
               </p>
             </div>
@@ -253,7 +253,7 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Availability
               </p>
-              <p className="mt-1 text-sm text-slate-700">
+              <p className="mt-1 break-words text-sm text-slate-700">
                 {profile.availability}
               </p>
             </div>
@@ -261,7 +261,7 @@ function Profile() {
         </section>
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
+          <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
             Contact information
           </h2>
 
@@ -270,7 +270,7 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Email
               </p>
-              <p className="mt-1 text-sm text-slate-700">
+              <p className="mt-1 break-words text-sm text-slate-700">
                 {profile.email}
               </p>
             </div>
@@ -279,7 +279,7 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Phone
               </p>
-              <p className="mt-1 text-sm text-slate-700">
+              <p className="mt-1 break-words text-sm text-slate-700">
                 {profile.phone || "Not provided"}
               </p>
             </div>
@@ -287,17 +287,17 @@ function Profile() {
         </section>
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
+          <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
             About
           </h2>
 
-          <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">
+          <p className="mt-4 break-words whitespace-pre-line text-sm leading-7 text-slate-600">
             {profile.about || "No description provided."}
           </p>
         </section>
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
+          <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
             Skills
           </h2>
 
@@ -320,7 +320,7 @@ function Profile() {
         </section>
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
+          <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
             Interests
           </h2>
 
@@ -343,7 +343,7 @@ function Profile() {
         </section>
 
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
-          <h2 className="text-lg font-semibold text-slate-950">
+          <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
             Projects
           </h2>
 
@@ -352,7 +352,7 @@ function Profile() {
               {profile.projects.map((project) => (
                 <div
                   key={project.id}
-                  className="rounded-lg border border-slate-200 p-5"
+                  className="rounded-lg border border-slate-200 p-4 sm:p-5"
                 >
                   <h3 className="font-semibold text-slate-950">
                     {project.name}
@@ -362,7 +362,7 @@ function Profile() {
                     {project.description}
                   </p>
 
-                  <p className="mt-4 text-xs text-slate-500">
+                  <p className="mt-4 break-words text-xs leading-5 text-slate-500">
                     <span className="font-medium text-slate-700">
                       Technologies:
                     </span>{" "}

@@ -230,7 +230,7 @@ function Discover() {
 
       <Navbar />
 
-      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+      <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
 
         {/* ==========================================
             HEADER
@@ -246,7 +246,7 @@ function Discover() {
             Discover Students
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
             Describe the teammate you need and TalentOS
             will find relevant students using semantic
             search and AI-powered analysis.
@@ -259,7 +259,7 @@ function Discover() {
             SEARCH
         ========================================== */}
 
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:mt-8 sm:p-6">
 
           <label
             htmlFor="search"
@@ -268,7 +268,7 @@ function Discover() {
             What kind of teammate are you looking for?
           </label>
 
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-3 flex min-w-0 flex-col gap-3 sm:flex-row">
 
             <input
               id="search"
@@ -283,14 +283,14 @@ function Discover() {
                 }
               }}
               placeholder="e.g. Python developer for an AI project"
-              className="flex-1 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-500"
+              className="min-w-0 w-full flex-1 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-slate-500"
             />
 
             <button
               type="button"
               onClick={handleSearch}
               disabled={loading}
-              className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full shrink-0 rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {loading
                 ? "Analyzing..."
@@ -313,7 +313,7 @@ function Discover() {
         ========================================== */}
 
         {loading && (
-          <div className="mt-8 rounded-xl border border-slate-200 bg-white p-8 text-center">
+          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 text-center sm:mt-8 sm:p-8">
 
             <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-900" />
 
@@ -336,7 +336,7 @@ function Discover() {
 
         {!loading && recommendation && (
 
-          <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:mt-8 sm:p-6">
 
             {/* ======================================
                 TITLE
@@ -361,7 +361,7 @@ function Discover() {
 
             {recommendation.requirement_summary && (
 
-              <div className="mt-6 rounded-xl bg-slate-50 p-5">
+              <div className="mt-5 rounded-xl bg-slate-50 p-4 sm:p-5">
 
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   Requirement Summary
@@ -399,14 +399,14 @@ function Discover() {
                 </div>
 
 
-                <div className="mt-5 space-y-5">
+                <div className="mt-5 space-y-4 sm:space-y-5">
 
                   {recommendation.candidate_analysis.map(
                     (candidate) => (
 
                     <article
                       key={candidate.profile_id}
-                      className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                      className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
                     >
 
                       {/* ==================================
@@ -415,7 +415,7 @@ function Discover() {
 
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
 
                           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-slate-900 text-sm font-semibold text-white">
 
@@ -428,11 +428,11 @@ function Discover() {
 
                           <div>
 
-                            <h4 className="font-semibold text-slate-950">
+                            <h4 className="min-w-0 break-words font-semibold text-slate-950">
                               {candidate.name}
                             </h4>
 
-                            <p className="text-xs text-slate-400">
+                            <p className="break-all text-xs text-slate-400">
                               Profile ID:{" "}
                               {candidate.profile_id}
                             </p>
@@ -444,7 +444,7 @@ function Discover() {
 
                         {/* MATCH LEVEL */}
 
-                        <span className="w-fit rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                        <span className="w-fit max-w-full break-words rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
                           {candidate.match_level}
                         </span>
 
@@ -455,17 +455,17 @@ function Discover() {
                           HIGHLIGHTED ANALYSIS
                       ================================== */}
 
-                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      <div className="mt-5 grid min-w-0 gap-3 sm:gap-4 md:grid-cols-2">
 
                         {/* SKILL ALIGNMENT */}
 
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4">
 
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Skill Alignment
                           </p>
 
-                          <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                          <p className="mt-2 break-words text-sm font-medium leading-6 text-slate-800">
                             {candidate.skill_alignment ||
                               "Not specified"}
                           </p>
@@ -475,13 +475,13 @@ function Discover() {
 
                         {/* EXPERIENCE RELEVANCE */}
 
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4">
 
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Experience Relevance
                           </p>
 
-                          <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                          <p className="mt-2 break-words text-sm font-medium leading-6 text-slate-800">
                             {candidate.experience_relevance ||
                               "Not specified"}
                           </p>
@@ -491,13 +491,13 @@ function Discover() {
 
                         {/* AVAILABILITY */}
 
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4">
 
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Availability
                           </p>
 
-                          <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                          <p className="mt-2 break-words text-sm font-medium leading-6 text-slate-800">
                             {candidate.availability ||
                               "Not specified"}
                           </p>
@@ -507,13 +507,13 @@ function Discover() {
 
                         {/* WHY THIS PROFILE MATCHES */}
 
-                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <div className="min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4">
 
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                             Why This Profile Matches
                           </p>
 
-                          <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                          <p className="mt-2 break-words text-sm font-medium leading-6 text-slate-800">
                             {candidate.why_match ||
                               "Not specified"}
                           </p>
@@ -527,13 +527,13 @@ function Discover() {
                           POTENTIAL CONTRIBUTION
                       ================================== */}
 
-                      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                      <div className="mt-4 min-w-0 rounded-lg border border-slate-200 bg-slate-50 p-4">
 
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                           Potential Contribution
                         </p>
 
-                        <p className="mt-2 text-sm font-medium leading-6 text-slate-800">
+                        <p className="mt-2 break-words text-sm font-medium leading-6 text-slate-800">
                           {candidate.potential_contribution ||
                             "Not specified"}
                         </p>
@@ -622,14 +622,14 @@ function Discover() {
                   represented in the retrieved profiles.
                 </p>
 
-                <div className="mt-4 space-y-2">
+                <div className="mt-4 min-w-0 space-y-2">
 
                   {recommendation.potential_skill_gaps.map(
                     (gap, index) => (
 
                     <div
                       key={`${gap}-${index}`}
-                      className="rounded-lg border border-slate-200 px-4 py-3 text-sm text-slate-600"
+                      className="min-w-0 break-words rounded-lg border border-slate-200 px-4 py-3 text-sm text-slate-600"
                     >
                       {gap}
                     </div>
@@ -649,7 +649,7 @@ function Discover() {
 
             {recommendation.team_insight && (
 
-              <div className="mt-8 rounded-xl bg-slate-900 p-5">
+              <div className="mt-6 rounded-xl bg-slate-900 p-4 sm:mt-8 sm:p-5">
 
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                   Team Insight
@@ -677,7 +677,7 @@ function Discover() {
           students.length === 0 &&
           !recommendation && (
 
-          <div className="mt-8 rounded-xl border border-slate-200 bg-white p-8 text-center">
+          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5 text-center sm:mt-8 sm:p-8">
 
             <h2 className="text-lg font-semibold text-slate-950">
               No students found

@@ -61,7 +61,7 @@ export default function Login() {
       // Remove old authentication key
       localStorage.removeItem("talentos_access_token");
 
-      // Get profile ID directly from your backend response
+      // Get profile ID directly from backend response
       const profileId = data.user?.profile_id;
 
       console.log("Profile ID:", profileId);
@@ -84,7 +84,9 @@ export default function Login() {
       // User has no profile yet
       localStorage.removeItem("talentos_profile_id");
 
-      console.log("No profile found. Redirecting to /create-profile");
+      console.log(
+        "No profile found. Redirecting to /create-profile"
+      );
 
       navigate("/create-profile", {
         replace: true,
@@ -105,94 +107,126 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
+      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md items-center">
 
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold">
-            Welcome Back
-          </h1>
+        <div className="w-full">
 
-          <p className="mt-2 text-gray-500">
-            Login to your TalentOS account
-          </p>
-        </div>
+          {/* Header */}
+          <div className="mb-7 text-center sm:mb-8">
+            <Link
+              to="/"
+              className="inline-block text-lg font-bold tracking-tight text-slate-950"
+            >
+              Talent<span className="text-indigo-600">OS</span>
+            </Link>
 
-        <form
-          onSubmit={handleLogin}
-          className="space-y-5"
-        >
-          <div>
-            <label className="mb-2 block font-medium">
-              Email
-            </label>
+            <h1 className="mt-5 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              Welcome Back
+            </h1>
 
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              required
-              autoComplete="email"
-              className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
-            />
+            <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
+              Login to your TalentOS account
+            </p>
           </div>
 
-          <div>
-            <label className="mb-2 block font-medium">
-              Password
-            </label>
+          {/* Login Card */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
 
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              autoComplete="current-password"
-              className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
-            />
-          </div>
+            <form
+              onSubmit={handleLogin}
+              className="space-y-5"
+            >
 
-          {error && (
-            <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-              {error}
+              {/* Email */}
+              <div>
+                <label
+                  htmlFor="email"
+                  className="mb-2 block text-sm font-medium text-slate-900"
+                >
+                  Email
+                </label>
 
-              {error
-                .toLowerCase()
-                .includes("verify your email") && (
-                <div className="mt-3">
-                  <Link
-                    to="/register"
-                    className="font-semibold underline"
-                  >
-                    Verify your email
-                  </Link>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                  autoComplete="email"
+                  className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label
+                  htmlFor="password"
+                  className="mb-2 block text-sm font-medium text-slate-900"
+                >
+                  Password
+                </label>
+
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  autoComplete="current-password"
+                  className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
+                />
+              </div>
+
+              {/* Error */}
+              {error && (
+                <div className="rounded-xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-600">
+                  <p className="break-words">
+                    {error}
+                  </p>
+
+                  {error
+                    .toLowerCase()
+                    .includes("verify your email") && (
+                    <div className="mt-3">
+                      <Link
+                        to="/register"
+                        className="font-semibold underline underline-offset-2"
+                      >
+                        Verify your email
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
+              {/* Login Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {loading ? "Logging in..." : "Login"}
+              </button>
 
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Don't have an account?{" "}
+            </form>
+          </div>
 
-          <Link
-            to="/register"
-            className="font-semibold text-black"
-          >
-            Create one
-          </Link>
-        </p>
+          {/* Register */}
+          <p className="mt-6 text-center text-sm leading-6 text-slate-500">
+            Don't have an account?{" "}
 
+            <Link
+              to="/register"
+              className="font-semibold text-slate-950 underline-offset-2 hover:underline"
+            >
+              Create one
+            </Link>
+          </p>
+
+        </div>
       </div>
     </div>
   );

@@ -521,7 +521,7 @@ function CreateProfile() {
       <div className="min-h-screen bg-slate-50">
         <Navbar />
 
-        <main className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+        <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-12 lg:py-16">
           <div className="rounded-xl border border-slate-200 bg-white p-8 text-center">
             <p className="text-sm text-slate-500">
               Loading profile...
@@ -538,19 +538,19 @@ function CreateProfile() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="max-w-2xl">
           <p className="text-sm font-medium text-slate-500">
             TalentOS
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
+          <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl sm:leading-tight lg:text-4xl">
             {isEditing
               ? "Update your profile"
               : "Create your profile"}
           </h1>
 
-          <p className="mt-4 leading-7 text-slate-600">
+          <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
             Tell other students about your skills, interests and
             projects so TalentOS can help find relevant teammates.
           </p>
@@ -562,8 +562,8 @@ function CreateProfile() {
         >
           {/* BASIC INFORMATION */}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
               Basic information
             </h2>
 
@@ -583,7 +583,7 @@ function CreateProfile() {
                   value={profile.name}
                   onChange={handleChange}
                   placeholder="Enter your name"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  className="mt-2 w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                 />
               </div>
 
@@ -600,7 +600,7 @@ function CreateProfile() {
                   name="institution"
                   value={profile.institution}
                   onChange={handleChange}
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  className="mt-2 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
                 >
                   <option value="">
                     Select your university / college
@@ -639,7 +639,7 @@ function CreateProfile() {
                   value={profile.degree}
                   onChange={handleChange}
                   placeholder="B.Tech Computer Science - AI"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  className="mt-2 w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                 />
               </div>
 
@@ -656,7 +656,7 @@ function CreateProfile() {
                   name="year"
                   value={profile.year}
                   onChange={handleChange}
-                  className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  className="mt-2 w-full min-w-0 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-500"
                 >
                   <option value="">Select year</option>
                   <option value="1st Year">1st Year</option>
@@ -670,8 +670,8 @@ function CreateProfile() {
 
           {/* CONTACT INFORMATION */}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
               Contact information
             </h2>
 
@@ -691,7 +691,7 @@ function CreateProfile() {
                   value={profile.email}
                   onChange={handleChange}
                   placeholder="you@example.com"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  className="mt-2 w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                 />
               </div>
 
@@ -710,7 +710,7 @@ function CreateProfile() {
                   value={profile.phone}
                   onChange={handleChange}
                   placeholder="+91 9876543210"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                  className="mt-2 w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                 />
               </div>
             </div>
@@ -718,8 +718,8 @@ function CreateProfile() {
 
           {/* ABOUT */}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
               About you
             </h2>
 
@@ -729,14 +729,14 @@ function CreateProfile() {
               onChange={handleChange}
               rows={5}
               placeholder="Tell us about yourself, your experience and what you like building..."
-              className="mt-4 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+              className="mt-4 w-full min-w-0 resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
             />
           </section>
 
           {/* SKILLS */}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
               Skills
             </h2>
 
@@ -754,13 +754,13 @@ function CreateProfile() {
                   }
                 }}
                 placeholder="e.g. Python"
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
               />
 
               <button
                 type="button"
                 onClick={addSkill}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+                className="w-full rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 sm:w-auto"
               >
                 Add skill
               </button>
@@ -790,8 +790,8 @@ function CreateProfile() {
 
           {/* INTERESTS */}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
               Interests
             </h2>
 
@@ -809,13 +809,13 @@ function CreateProfile() {
                   }
                 }}
                 placeholder="e.g. Artificial Intelligence"
-                className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                className="min-w-0 flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
               />
 
               <button
                 type="button"
                 onClick={addInterest}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white hover:bg-slate-800"
+                className="w-full rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 sm:w-auto"
               >
                 Add interest
               </button>
@@ -847,10 +847,10 @@ function CreateProfile() {
 
           {/* PROJECTS */}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <div className="flex items-center justify-between">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-lg font-semibold text-slate-950">
+                <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
                   Projects
                 </h2>
 
@@ -862,7 +862,7 @@ function CreateProfile() {
               <button
                 type="button"
                 onClick={addProject}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 sm:w-auto"
               >
                 Add project
               </button>
@@ -872,9 +872,9 @@ function CreateProfile() {
               {profile.projects.map((project, index) => (
                 <div
                   key={project.id}
-                  className="rounded-lg border border-slate-200 p-5"
+                  className="rounded-lg border border-slate-200 p-4 sm:p-5"
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="font-medium text-slate-900">
                       Project {index + 1}
                     </h3>
@@ -909,7 +909,7 @@ function CreateProfile() {
                           )
                         }
                         placeholder="AI Resume Analyzer"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                        className="mt-2 w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
                     </div>
 
@@ -929,7 +929,7 @@ function CreateProfile() {
                         }
                         rows={4}
                         placeholder="Describe what you built..."
-                        className="mt-2 w-full resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                        className="mt-2 w-full min-w-0 resize-none rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
                     </div>
 
@@ -949,7 +949,7 @@ function CreateProfile() {
                           )
                         }
                         placeholder="Python, FastAPI, React"
-                        className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
+                        className="mt-2 w-full min-w-0 rounded-lg border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500"
                       />
                     </div>
                   </div>
@@ -960,8 +960,8 @@ function CreateProfile() {
 
           {/* AVAILABILITY */}
 
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
-            <h2 className="text-lg font-semibold text-slate-950">
+          <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
+            <h2 className="text-base font-semibold text-slate-950 sm:text-lg">
               Availability
             </h2>
 
@@ -981,11 +981,11 @@ function CreateProfile() {
 
           {/* SUBMIT */}
 
-          <div className="flex justify-end">
+          <div className="flex w-full justify-stretch sm:justify-end">
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {loading
                 ? isEditing

@@ -324,7 +324,7 @@ function Teams() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-12">
 
         {/* HEADER */}
 
@@ -333,20 +333,20 @@ function Teams() {
             TalentOS
           </p>
 
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+          <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
             Teams
           </h1>
 
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">
             Create and manage teams for your projects.
           </p>
         </div>
 
         {/* CREATE TEAM */}
 
-        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:mt-8 sm:p-6">
 
-          <h2 className="text-lg font-semibold text-slate-950">
+          <h2 className="break-words text-lg font-semibold text-slate-950">
             Create a Team
           </h2>
 
@@ -356,7 +356,7 @@ function Teams() {
           >
 
             <div>
-              <label className="text-sm font-medium text-slate-900">
+              <label className="break-words text-sm font-medium text-slate-900">
                 Team Name
               </label>
 
@@ -372,7 +372,7 @@ function Teams() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-slate-900">
+              <label className="break-words text-sm font-medium text-slate-900">
                 Project
               </label>
 
@@ -390,7 +390,7 @@ function Teams() {
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-lg bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {loading
                 ? "Creating..."
@@ -404,14 +404,14 @@ function Teams() {
 
         <section className="mt-8">
 
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 
             <div>
-              <h2 className="text-lg font-semibold text-slate-950">
+              <h2 className="break-words text-lg font-semibold text-slate-950">
                 Your Teams
               </h2>
 
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 break-words text-sm text-slate-500">
                 Teams currently available on TalentOS.
               </p>
             </div>
@@ -420,7 +420,7 @@ function Teams() {
 
           {teams.length === 0 ? (
 
-            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-8 text-center">
+            <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 text-center sm:p-8">
 
               <h3 className="font-semibold text-slate-950">
                 No teams yet
@@ -440,20 +440,20 @@ function Teams() {
 
                 <article
                   key={team.id}
-                  className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+                  className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
                 >
 
                   {/* TEAM HEADER */}
 
-                  <div className="flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 items-start justify-between gap-3 sm:gap-4">
 
                     <div>
 
-                      <h3 className="text-lg font-semibold text-slate-950">
+                      <h3 className="break-words text-lg font-semibold text-slate-950">
                         {team.name}
                       </h3>
 
-                      <p className="mt-1 text-sm text-slate-500">
+                      <p className="mt-1 break-words text-sm text-slate-500">
                         {team.project}
                       </p>
 
@@ -494,23 +494,23 @@ function Teams() {
 
                             <div
                               key={member.id}
-                              className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 px-4 py-3"
+                              className="flex min-w-0 flex-col gap-3 rounded-lg bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                             >
 
                               {/* MEMBER INFO */}
 
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
 
-                                <p className="text-sm font-medium text-slate-900">
+                                <p className="break-words text-sm font-medium text-slate-900">
                                   {member.name}
                                 </p>
 
-                                <p className="mt-1 text-xs text-slate-500">
+                                <p className="mt-1 break-words text-xs text-slate-500">
                                   {member.degree}
                                 </p>
 
                                 {member.role && (
-                                  <p className="mt-1 text-xs text-slate-400">
+                                  <p className="mt-1 break-words text-xs text-slate-400">
                                     {member.role}
                                   </p>
                                 )}
@@ -528,7 +528,7 @@ function Teams() {
                                     member.name
                                   )
                                 }
-                                className="shrink-0 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50"
+                                className="w-full shrink-0 rounded-lg border border-red-200 px-3 py-2 text-xs font-medium text-red-600 transition hover:bg-red-50 sm:w-auto"
                               >
                                 Remove
                               </button>

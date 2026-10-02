@@ -322,25 +322,26 @@ export default function Register() {
 
   if (otpMode) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
+      <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
+        <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md items-center">
 
           {/* Header */}
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold">
+          <div className="mb-7 text-center sm:mb-8">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
               Verify Your Email
             </h1>
 
-            <p className="mt-2 text-gray-500">
+            <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
               We sent a 6-digit verification code to
             </p>
 
-            <p className="mt-1 font-semibold">
+            <p className="mt-1 break-all text-sm font-semibold text-slate-900 sm:text-base">
               {email}
             </p>
           </div>
 
           {/* OTP Form */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
           <form
             onSubmit={handleVerifyOTP}
             className="space-y-5"
@@ -348,7 +349,7 @@ export default function Register() {
 
             {/* OTP */}
             <div>
-              <label className="mb-2 block font-medium">
+              <label className="mb-2 block text-sm font-medium text-slate-900">
                 Verification Code
               </label>
 
@@ -366,20 +367,20 @@ export default function Register() {
                 }
                 placeholder="000000"
                 autoComplete="one-time-code"
-                className="w-full rounded-xl border px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:ring-2"
+                className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-center text-xl tracking-[0.35em] outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200 sm:text-2xl sm:tracking-[0.5em]"
               />
             </div>
 
             {/* Error */}
             {error && (
-              <div className="whitespace-pre-line rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+              <div className="whitespace-pre-line break-words rounded-xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-600">
                 {error}
               </div>
             )}
 
             {/* Success */}
             {success && (
-              <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-600">
+              <div className="break-words rounded-xl bg-green-50 px-4 py-3 text-sm leading-6 text-green-600">
                 {success}
               </div>
             )}
@@ -388,13 +389,14 @@ export default function Register() {
             <button
               type="submit"
               disabled={loading || otp.length !== 6}
-              className="w-full rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading
                 ? "Verifying..."
                 : "Verify Email"}
             </button>
           </form>
+          </div>
 
           {/* Resend */}
           <div className="mt-6 text-center">
@@ -406,7 +408,7 @@ export default function Register() {
               type="button"
               onClick={handleResendOTP}
               disabled={resending}
-              className="mt-2 font-semibold text-black underline disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-2 font-semibold text-slate-950 underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {resending
                 ? "Sending..."
@@ -423,7 +425,7 @@ export default function Register() {
               setError("");
               setSuccess("");
             }}
-            className="mt-6 block w-full text-center text-sm text-gray-500 hover:text-black"
+            className="mt-6 block w-full text-center text-sm text-slate-500 transition hover:text-slate-950"
           >
             ← Use a different email
           </button>
@@ -438,21 +440,22 @@ export default function Register() {
   // =====================================================
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
+      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md items-center">
 
         {/* Header */}
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold">
+        <div className="mb-7 text-center sm:mb-8">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
             Create Account
           </h1>
 
-          <p className="mt-2 text-gray-500">
+          <p className="mt-2 text-sm leading-6 text-slate-500 sm:text-base">
             Join TalentOS
           </p>
         </div>
 
         {/* Register Form */}
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
         <form
           onSubmit={handleRegister}
           className="space-y-5"
@@ -460,7 +463,7 @@ export default function Register() {
 
           {/* Email */}
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block text-sm font-medium text-slate-900">
               Email
             </label>
 
@@ -473,13 +476,13 @@ export default function Register() {
               placeholder="you@example.com"
               required
               autoComplete="email"
-              className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
             />
           </div>
 
           {/* Password */}
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block text-sm font-medium text-slate-900">
               Password
             </label>
 
@@ -493,13 +496,13 @@ export default function Register() {
               required
               minLength={8}
               autoComplete="new-password"
-              className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
             />
           </div>
 
           {/* Confirm Password */}
           <div>
-            <label className="mb-2 block font-medium">
+            <label className="mb-2 block text-sm font-medium text-slate-900">
               Confirm Password
             </label>
 
@@ -513,13 +516,13 @@ export default function Register() {
               required
               minLength={8}
               autoComplete="new-password"
-              className="w-full rounded-xl border px-4 py-3 outline-none focus:ring-2"
+              className="w-full min-w-0 rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none transition focus:border-slate-500 focus:ring-2 focus:ring-slate-200"
             />
           </div>
 
           {/* Error */}
           {error && (
-            <div className="whitespace-pre-line rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
+            <div className="whitespace-pre-line break-words rounded-xl bg-red-50 px-4 py-3 text-sm leading-6 text-red-600">
               {error}
             </div>
           )}
@@ -528,21 +531,22 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-black px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading
               ? "Sending verification code..."
               : "Create Account"}
           </button>
         </form>
+        </div>
 
         {/* Login */}
-        <p className="mt-6 text-center text-sm text-gray-500">
+        <p className="mt-6 text-center text-sm leading-6 text-slate-500">
           Already have an account?{" "}
 
           <Link
             to="/login"
-            className="font-semibold text-black"
+            className="font-semibold text-slate-950 underline-offset-2 hover:underline"
           >
             Login
           </Link>

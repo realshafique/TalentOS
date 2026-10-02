@@ -12,7 +12,7 @@ function Home() {
       <main>
 
         {/* Hero Section */}
-        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:py-28">
 
           <div className="max-w-3xl">
 
@@ -20,31 +20,31 @@ function Home() {
               AI-powered talent discovery
             </p>
 
-            <h1 className="text-4xl font-bold tracking-tight text-slate-950 sm:text-6xl">
+            <h1 className="text-3xl font-bold leading-tight tracking-tight text-slate-950 sm:text-5xl sm:leading-tight lg:text-6xl">
               Find the right people
-              <span className="block text-slate-500">
+              <span className="mt-1 block text-slate-500 sm:mt-0">
                 for the right project.
               </span>
             </h1>
 
-            <p className="mt-6 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+            <p className="mt-5 max-w-2xl text-sm leading-6 text-slate-600 sm:mt-6 sm:text-base sm:leading-7 lg:text-lg">
               TalentOS helps universities discover student talent,
               find relevant teammates and build better project teams
               using AI-powered semantic search.
             </p>
 
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-7 flex w-full flex-col gap-3 sm:mt-8 sm:w-auto sm:flex-row">
 
               <Link
                 to="/discover"
-                className="rounded-lg bg-slate-900 px-5 py-3 text-center text-sm font-medium text-white hover:bg-slate-800"
+                className="w-full rounded-lg bg-slate-900 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-slate-800 sm:w-auto"
               >
                 Discover talent
               </Link>
 
               <Link
                 to="/create-profile"
-                className="rounded-lg border border-slate-300 bg-white px-5 py-3 text-center text-sm font-medium text-slate-700 hover:bg-slate-100"
+                className="w-full rounded-lg border border-slate-300 bg-white px-5 py-3 text-center text-sm font-medium text-slate-700 transition hover:bg-slate-100 sm:w-auto"
               >
                 Create your profile
               </Link>
@@ -58,7 +58,7 @@ function Home() {
         {/* Problem Section */}
         <section className="border-y border-slate-200 bg-white">
 
-          <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+          <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
 
             <div className="max-w-2xl">
 
@@ -66,11 +66,11 @@ function Home() {
                 The problem
               </p>
 
-              <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+              <h2 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl">
                 Finding teammates shouldn't depend on your friend circle.
               </h2>
 
-              <p className="mt-4 leading-7 text-slate-600">
+              <p className="mt-4 text-sm leading-6 text-slate-600 sm:text-base sm:leading-7">
                 Students often discover teammates through friends,
                 WhatsApp groups or existing networks. This can make
                 useful skills difficult to discover.
@@ -83,7 +83,7 @@ function Home() {
         </section>
 
         {/* How it works */}
-        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+        <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6 sm:py-16">
 
           <div className="max-w-2xl">
 
@@ -91,15 +91,16 @@ function Home() {
               How TalentOS works
             </p>
 
-            <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
+            <h2 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl">
               From student profiles to meaningful matches.
             </h2>
 
           </div>
 
-          <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <div className="mt-8 grid gap-4 sm:mt-10 sm:gap-6 md:grid-cols-3">
 
-            <div className="rounded-xl border border-slate-200 bg-white p-6">
+            {/* Step 1 */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
 
               <p className="text-sm font-semibold text-slate-900">
                 01
@@ -115,7 +116,8 @@ function Home() {
 
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-6">
+            {/* Step 2 */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
 
               <p className="text-sm font-semibold text-slate-900">
                 02
@@ -131,7 +133,8 @@ function Home() {
 
             </div>
 
-            <div className="rounded-xl border border-slate-200 bg-white p-6">
+            {/* Step 3 */}
+            <div className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
 
               <p className="text-sm font-semibold text-slate-900">
                 03

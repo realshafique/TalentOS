@@ -313,8 +313,8 @@ function StudentProfile() {
       <div className="min-h-screen bg-slate-50">
         <Navbar />
 
-        <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center shadow-sm">
+        <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm sm:p-10">
             <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900" />
 
             <p className="mt-4 text-sm text-slate-500">
@@ -337,9 +337,9 @@ function StudentProfile() {
       <div className="min-h-screen bg-slate-50">
         <Navbar />
 
-        <main className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
-          <div className="rounded-2xl border border-red-200 bg-white p-10 text-center shadow-sm">
-            <h1 className="text-xl font-semibold text-slate-950">
+        <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6 sm:py-16">
+          <div className="rounded-2xl border border-red-200 bg-white p-5 text-center shadow-sm sm:p-10">
+            <h1 className="break-words text-lg font-semibold text-slate-950 sm:text-xl">
               Profile unavailable
             </h1>
 
@@ -371,7 +371,7 @@ function StudentProfile() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 sm:py-14">
 
         {/* BACK BUTTON */}
         <button
@@ -383,29 +383,29 @@ function StudentProfile() {
         </button>
 
         {/* PROFILE HEADER */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start">
 
             {/* Avatar */}
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-3xl font-bold text-white">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-slate-900 text-2xl font-bold text-white sm:h-20 sm:w-20 sm:text-3xl">
               {profile.name
                 ? profile.name.charAt(0).toUpperCase()
                 : "S"}
             </div>
 
-            <div className="flex-1">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-slate-950">
+                  <h1 className="break-words text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
                     {profile.name}
                   </h1>
 
-                  <p className="mt-2 text-slate-600">
+                  <p className="mt-2 break-words text-slate-600">
                     {profile.degree}
                   </p>
 
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 break-words text-sm text-slate-500">
                     {profile.institution}
                     {profile.year
                       ? ` • ${profile.year}`
@@ -430,7 +430,7 @@ function StudentProfile() {
                 <button
                   type="button"
                   onClick={handleOpenTeamModal}
-                  className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800"
+                  className="w-full rounded-lg bg-slate-900 px-5 py-3 text-center text-sm font-medium text-white transition hover:bg-slate-800 sm:w-auto"
                 >
                   + Add to Team
                 </button>
@@ -440,18 +440,18 @@ function StudentProfile() {
         </section>
 
         {/* ABOUT */}
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="mt-6 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-8">
           <h2 className="text-lg font-semibold text-slate-950">
             About
           </h2>
 
-          <p className="mt-4 whitespace-pre-line leading-7 text-slate-600">
+          <p className="mt-4 break-words whitespace-pre-line leading-7 text-slate-600">
             {profile.about || "No information provided."}
           </p>
         </section>
 
         {/* SKILLS */}
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="mt-6 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-8">
           <h2 className="text-lg font-semibold text-slate-950">
             Skills
           </h2>
@@ -461,7 +461,7 @@ function StudentProfile() {
               {profile.skills.map((skill, index) => (
                 <span
                   key={`${skill}-${index}`}
-                  className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700"
+                  className="max-w-full break-words rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700"
                 >
                   {skill}
                 </span>
@@ -475,7 +475,7 @@ function StudentProfile() {
         </section>
 
         {/* INTERESTS */}
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="mt-6 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-8">
           <h2 className="text-lg font-semibold text-slate-950">
             Interests
           </h2>
@@ -485,7 +485,7 @@ function StudentProfile() {
               {profile.interests.map((interest, index) => (
                 <span
                   key={`${interest}-${index}`}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                  className="max-w-full break-words rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700"
                 >
                   {interest}
                 </span>
@@ -499,7 +499,7 @@ function StudentProfile() {
         </section>
 
         {/* PROJECTS */}
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="mt-6 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-8">
           <h2 className="text-lg font-semibold text-slate-950">
             Projects
           </h2>
@@ -509,15 +509,15 @@ function StudentProfile() {
               {profile.projects.map((project, index) => (
                 <div
                   key={project.id || index}
-                  className="rounded-xl border border-slate-200 p-5"
+                  className="min-w-0 rounded-xl border border-slate-200 p-4 sm:p-5"
                 >
-                  <h3 className="text-base font-semibold text-slate-950">
+                  <h3 className="break-words text-base font-semibold text-slate-950">
                     {project.name ||
                       `Project ${index + 1}`}
                   </h3>
 
                   {project.description && (
-                    <p className="mt-2 leading-6 text-slate-600">
+                    <p className="mt-2 break-words leading-6 text-slate-600">
                       {project.description}
                     </p>
                   )}
@@ -528,7 +528,7 @@ function StudentProfile() {
                         Technologies
                       </p>
 
-                      <p className="mt-1 text-sm text-slate-600">
+                      <p className="mt-1 break-words text-sm text-slate-600">
                         {project.technologies}
                       </p>
                     </div>
@@ -544,13 +544,13 @@ function StudentProfile() {
         </section>
 
         {/* CONTACT */}
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="mt-6 min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-8">
           <h2 className="text-lg font-semibold text-slate-950">
             Contact
           </h2>
 
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl bg-slate-50 p-4">
+            <div className="min-w-0 rounded-xl bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Email
               </p>
@@ -560,12 +560,12 @@ function StudentProfile() {
               </p>
             </div>
 
-            <div className="rounded-xl bg-slate-50 p-4">
+            <div className="min-w-0 rounded-xl bg-slate-50 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                 Phone
               </p>
 
-              <p className="mt-1 text-sm text-slate-700">
+              <p className="mt-1 break-all text-sm text-slate-700">
                 {profile.phone || "Not provided"}
               </p>
             </div>
@@ -578,16 +578,16 @@ function StudentProfile() {
       ===================================================== */}
 
       {showTeamModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-3 py-3 sm:items-center sm:px-4 sm:py-0">
+          <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-xl sm:p-6">
 
-            <div className="flex items-start justify-between">
+            <div className="flex min-w-0 items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-semibold text-slate-950">
+                <h2 className="break-words text-lg font-semibold text-slate-950 sm:text-xl">
                   Add to Team
                 </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 break-words text-sm text-slate-500">
                   Add {profile.name} to one of your teams.
                 </p>
               </div>
@@ -681,11 +681,11 @@ function StudentProfile() {
             )}
 
             {/* ACTIONS */}
-            <div className="mt-6 flex justify-end gap-3">
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setShowTeamModal(false)}
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-center text-sm font-medium text-slate-700 hover:bg-slate-50 sm:w-auto"
               >
                 Cancel
               </button>
@@ -697,7 +697,7 @@ function StudentProfile() {
                   disabled={
                     addingToTeam || !selectedTeamId
                   }
-                  className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-lg bg-slate-900 px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                 >
                   {addingToTeam
                     ? "Adding..."
