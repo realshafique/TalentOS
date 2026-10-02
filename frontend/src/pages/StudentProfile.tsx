@@ -62,7 +62,7 @@ function StudentProfile() {
   const [addingToTeam, setAddingToTeam] = useState(false);
 
   const getToken = () => {
-    return localStorage.getItem("talentos_access_token");
+    return localStorage.getItem("access_token");
   };
 
   const getAuthConfig = () => {
@@ -170,7 +170,7 @@ function StudentProfile() {
           axios.isAxiosError(err) &&
           err.response?.status === 401
         ) {
-          localStorage.removeItem("talentos_access_token");
+          localStorage.removeItem("access_token");
           localStorage.removeItem("talentos_user");
           navigate("/login");
           return;
@@ -213,7 +213,7 @@ function StudentProfile() {
         axios.isAxiosError(error) &&
         error.response?.status === 401
       ) {
-        localStorage.removeItem("talentos_access_token");
+        localStorage.removeItem("access_token");
         localStorage.removeItem("talentos_user");
         navigate("/login");
       }
@@ -284,7 +284,7 @@ function StudentProfile() {
         axios.isAxiosError(error) &&
         error.response?.status === 401
       ) {
-        localStorage.removeItem("talentos_access_token");
+        localStorage.removeItem("access_token");
         localStorage.removeItem("talentos_user");
 
         navigate("/login");
