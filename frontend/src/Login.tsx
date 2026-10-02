@@ -54,10 +54,15 @@ export default function Login() {
       // SAVE AUTHENTICATION TOKEN
       // =====================================================
 
+      // IMPORTANT:
+      // api.ts also reads "access_token"
       localStorage.setItem(
-        "talentos_access_token",
+        "access_token",
         data.access_token
       );
+
+      // Remove old token key if it exists
+      localStorage.removeItem("talentos_access_token");
 
       // Remove old profile ID
       localStorage.removeItem("talentos_profile_id");
@@ -152,6 +157,17 @@ export default function Login() {
           {error && (
             <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
               {error}
+
+              {error.toLowerCase().includes("verify your email") && (
+                <div className="mt-3">
+                  <Link
+                    to="/register"
+                    className="font-semibold underline"
+                  >
+                    Verify your email
+                  </Link>
+                </div>
+              )}
             </div>
           )}
 

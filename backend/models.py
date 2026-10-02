@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, Text, ForeignKey, DateTime
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Integer,
+    String,
+    Text,
+    ForeignKey,
+    DateTime,
+)
+
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -31,6 +40,12 @@ class User(Base):
         nullable=False
     )
 
+    email_verified = Column(
+        Boolean,
+        nullable=False,
+        default=False
+    )
+
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -41,6 +56,66 @@ class User(Base):
         "Profile",
         back_populates="user",
         uselist=False
+    )
+
+    otp_records = relationship(
+        "EmailVerificationOTP",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
+
+# ==================================================
+# EMAIL VERIFICATION OTP
+# ==================================================
+
+class EmailVerificationOTP(Base):
+
+    __tablename__ = "email_verification_otps"
+
+    id = Column(
+        Integer,
+        primary_key=True,
+        index=True
+    )
+
+    user_id = Column(
+        Integer,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    otp_hash = Column(
+        String(255),
+        nullable=False
+    )
+
+    expires_at = Column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+
+    attempts = Column(
+        Integer,
+        nullable=False,
+        default=0
+    )
+
+    used_at = Column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    user = relationship(
+        "User",
+        back_populates="otp_records"
     )
 
 
@@ -58,9 +133,6 @@ class Profile(Base):
         index=True
     )
 
-    # Links a profile to its authenticated account.
-    # Nullable because existing profiles may not
-    # have authenticated accounts yet.
     user_id = Column(
         Integer,
         ForeignKey("users.id"),

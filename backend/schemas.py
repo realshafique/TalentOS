@@ -16,6 +16,15 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class VerifyOTPRequest(BaseModel):
+    email: EmailStr
+    otp: str
+
+
+class ResendOTPRequest(BaseModel):
+    email: EmailStr
+
+
 # =========================================================
 # PROJECT
 # =========================================================

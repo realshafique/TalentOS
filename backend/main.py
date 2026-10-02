@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
@@ -12,6 +13,7 @@ from database import engine, Base, get_db
 
 from models import (
     User,
+    EmailVerificationOTP,
     Profile,
     Project,
     Team,
@@ -21,6 +23,8 @@ from models import (
 from schemas import (
     RegisterRequest,
     LoginRequest,
+    VerifyOTPRequest,
+    ResendOTPRequest,
     ProfileCreate,
     SearchRequest,
     TeamCreate,
@@ -45,7 +49,11 @@ from vector_db import (
 from qdrant_service import client
 
 from llm import generate_ai_recommendation
-
+from otp_service import (
+    generate_otp,
+    hash_otp,
+    send_otp_email,
+)
 
 # =========================================================
 # STARTUP
@@ -110,6 +118,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # =========================================================
 # HOME
 # =========================================================
@@ -134,6 +143,10 @@ def register(
 
     email = register_data.email.lower().strip()
 
+    # -----------------------------------------------------
+    # PASSWORD VALIDATION
+    # -----------------------------------------------------
+
     if len(register_data.password) < 8:
 
         raise HTTPException(
@@ -141,78 +154,466 @@ def register(
             detail="Password must be at least 8 characters long.",
         )
 
+    # -----------------------------------------------------
+    # CHECK EXISTING USER
+    # -----------------------------------------------------
+
     existing_user = (
         db.query(User)
         .filter(User.email == email)
         .first()
     )
 
-    if existing_user:
+    # -----------------------------------------------------
+    # ALREADY VERIFIED
+    # -----------------------------------------------------
+
+    if existing_user and existing_user.email_verified:
 
         raise HTTPException(
             status_code=400,
             detail="An account with this email already exists.",
         )
 
-    new_user = User(
-        email=email,
-        password_hash=hash_password(
+    # -----------------------------------------------------
+    # EXISTING UNVERIFIED USER
+    # -----------------------------------------------------
+
+    if existing_user:
+
+        existing_user.password_hash = hash_password(
             register_data.password
+        )
+
+        user = existing_user
+
+    # -----------------------------------------------------
+    # NEW USER
+    # -----------------------------------------------------
+
+    else:
+
+        user = User(
+            email=email,
+            password_hash=hash_password(
+                register_data.password
+            ),
+            email_verified=False,
+        )
+
+        db.add(user)
+
+        db.flush()
+
+    # -----------------------------------------------------
+    # INVALIDATE PREVIOUS OTPs
+    # -----------------------------------------------------
+
+    db.query(EmailVerificationOTP).filter(
+        EmailVerificationOTP.user_id == user.id,
+        EmailVerificationOTP.used_at.is_(None),
+    ).update(
+        {
+            EmailVerificationOTP.used_at:
+                datetime.now(timezone.utc)
+        },
+        synchronize_session=False,
+    )
+
+    # -----------------------------------------------------
+    # GENERATE OTP
+    # -----------------------------------------------------
+
+    otp = generate_otp()
+
+    otp_record = EmailVerificationOTP(
+        user_id=user.id,
+        otp_hash=hash_otp(otp),
+        expires_at=(
+            datetime.now(timezone.utc)
+            + timedelta(minutes=5)
         ),
+        attempts=0,
     )
 
-    db.add(new_user)
-
-    db.flush()
-
-    # Automatically connect an existing profile
-    # if the email matches.
-
-    existing_profile = (
-        db.query(Profile)
-        .filter(Profile.email == email)
-        .first()
-    )
-
-    if existing_profile:
-
-        if existing_profile.user_id is not None:
-
-            db.rollback()
-
-            raise HTTPException(
-                status_code=400,
-                detail="This profile is already connected to another account.",
-            )
-
-        existing_profile.user_id = new_user.id
+    db.add(otp_record)
 
     db.commit()
 
-    db.refresh(new_user)
+    # -----------------------------------------------------
+    # SEND OTP EMAIL
+    # -----------------------------------------------------
+
+    try:
+
+        send_otp_email(
+            email,
+            otp,
+        )
+
+    except Exception as e:
+
+        db.rollback()
+
+        print(
+            f"OTP email error: "
+            f"{type(e).__name__}: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to send verification email.",
+        )
+
+    return {
+        "message": "Verification code sent to your email.",
+        "email": email,
+    }
+
+
+# =========================================================
+# AUTH - VERIFY OTP
+# =========================================================
+
+@app.post("/auth/verify-otp")
+def verify_otp(
+    verification: VerifyOTPRequest,
+    db: Session = Depends(get_db),
+):
+
+    email = verification.email.lower().strip()
+
+    otp = verification.otp.strip()
+
+    # -----------------------------------------------------
+    # OTP FORMAT
+    # -----------------------------------------------------
+
+    if not otp.isdigit() or len(otp) != 6:
+
+        raise HTTPException(
+            status_code=400,
+            detail="OTP must be a 6-digit number.",
+        )
+
+    # -----------------------------------------------------
+    # FIND USER
+    # -----------------------------------------------------
+
+    user = (
+        db.query(User)
+        .filter(User.email == email)
+        .first()
+    )
+
+    if not user:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid verification request.",
+        )
+
+    # -----------------------------------------------------
+    # ALREADY VERIFIED
+    # -----------------------------------------------------
+
+    if user.email_verified:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Email is already verified.",
+        )
+
+    # -----------------------------------------------------
+    # FIND LATEST ACTIVE OTP
+    # -----------------------------------------------------
+
+    otp_record = (
+        db.query(EmailVerificationOTP)
+        .filter(
+            EmailVerificationOTP.user_id == user.id,
+            EmailVerificationOTP.used_at.is_(None),
+        )
+        .order_by(
+            EmailVerificationOTP.created_at.desc()
+        )
+        .first()
+    )
+
+    if not otp_record:
+
+        raise HTTPException(
+            status_code=400,
+            detail="No active verification code found.",
+        )
+
+    # -----------------------------------------------------
+    # CURRENT TIME
+    # -----------------------------------------------------
+
+    now = datetime.now(timezone.utc)
+
+    expires_at = otp_record.expires_at
+
+    if expires_at.tzinfo is None:
+
+        expires_at = expires_at.replace(
+            tzinfo=timezone.utc
+        )
+
+    # -----------------------------------------------------
+    # OTP EXPIRATION
+    # -----------------------------------------------------
+
+    if expires_at <= now:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Verification code has expired.",
+        )
+
+    # -----------------------------------------------------
+    # MAX ATTEMPTS
+    # -----------------------------------------------------
+
+    if otp_record.attempts >= 5:
+
+        raise HTTPException(
+            status_code=429,
+            detail=(
+                "Too many incorrect attempts. "
+                "Please request a new code."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # CHECK OTP
+    # -----------------------------------------------------
+
+    if hash_otp(otp) != otp_record.otp_hash:
+
+        otp_record.attempts += 1
+
+        db.commit()
+
+        remaining = max(
+            0,
+            5 - otp_record.attempts
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Invalid verification code. "
+                f"{remaining} attempts remaining."
+            ),
+        )
+
+    # -----------------------------------------------------
+    # OTP SUCCESS
+    # -----------------------------------------------------
+
+    user.email_verified = True
+
+    otp_record.used_at = now
+
+    db.commit()
+
+    db.refresh(user)
+
+    # -----------------------------------------------------
+    # FIND PROFILE
+    # -----------------------------------------------------
+
+    profile = (
+        db.query(Profile)
+        .filter(Profile.user_id == user.id)
+        .first()
+    )
+
+    # -----------------------------------------------------
+    # CREATE JWT
+    # -----------------------------------------------------
 
     access_token = create_access_token(
-        new_user.id
+        user.id
     )
 
     return {
-        "message": "Account created successfully",
+        "message": "Email verified successfully.",
 
         "access_token": access_token,
 
         "token_type": "bearer",
 
         "user": {
-            "id": new_user.id,
+            "id": user.id,
 
-            "email": new_user.email,
+            "email": user.email,
 
             "profile_id": (
-                existing_profile.id
-                if existing_profile
+                profile.id
+                if profile
                 else None
             ),
         },
+    }
+
+
+# =========================================================
+# AUTH - RESEND OTP
+# =========================================================
+
+@app.post("/auth/resend-otp")
+def resend_otp(
+    request: ResendOTPRequest,
+    db: Session = Depends(get_db),
+):
+
+    email = request.email.lower().strip()
+
+    # -----------------------------------------------------
+    # FIND USER
+    # -----------------------------------------------------
+
+    user = (
+        db.query(User)
+        .filter(User.email == email)
+        .first()
+    )
+
+    if not user:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Account not found.",
+        )
+
+    # -----------------------------------------------------
+    # ALREADY VERIFIED
+    # -----------------------------------------------------
+
+    if user.email_verified:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Email is already verified.",
+        )
+
+    # -----------------------------------------------------
+    # FIND LAST OTP
+    # -----------------------------------------------------
+
+    latest_otp = (
+        db.query(EmailVerificationOTP)
+        .filter(
+            EmailVerificationOTP.user_id == user.id
+        )
+        .order_by(
+            EmailVerificationOTP.created_at.desc()
+        )
+        .first()
+    )
+
+    # -----------------------------------------------------
+    # 60 SECOND RESEND COOLDOWN
+    # -----------------------------------------------------
+
+    if latest_otp and latest_otp.created_at:
+
+        now = datetime.now(timezone.utc)
+
+        created_at = latest_otp.created_at
+
+        if created_at.tzinfo is None:
+
+            created_at = created_at.replace(
+                tzinfo=timezone.utc
+            )
+
+        seconds_since_last = (
+            now - created_at
+        ).total_seconds()
+
+        if seconds_since_last < 60:
+
+            remaining = max(
+                1,
+                int(
+                    60 - seconds_since_last
+                )
+            )
+
+            raise HTTPException(
+                status_code=429,
+                detail=(
+                    f"Please wait {remaining} seconds "
+                    "before requesting another code."
+                ),
+            )
+
+    # -----------------------------------------------------
+    # INVALIDATE PREVIOUS OTPs
+    # -----------------------------------------------------
+
+    db.query(EmailVerificationOTP).filter(
+        EmailVerificationOTP.user_id == user.id,
+        EmailVerificationOTP.used_at.is_(None),
+    ).update(
+        {
+            EmailVerificationOTP.used_at:
+                datetime.now(timezone.utc)
+        },
+        synchronize_session=False,
+    )
+
+    # -----------------------------------------------------
+    # GENERATE NEW OTP
+    # -----------------------------------------------------
+
+    otp = generate_otp()
+
+    otp_record = EmailVerificationOTP(
+        user_id=user.id,
+        otp_hash=hash_otp(otp),
+        expires_at=(
+            datetime.now(timezone.utc)
+            + timedelta(minutes=5)
+        ),
+        attempts=0,
+    )
+
+    db.add(otp_record)
+
+    db.commit()
+
+    # -----------------------------------------------------
+    # SEND EMAIL
+    # -----------------------------------------------------
+
+    try:
+
+        send_otp_email(
+            email,
+            otp,
+        )
+
+    except Exception as e:
+
+        db.rollback()
+
+        print(
+            f"Resend OTP error: "
+            f"{type(e).__name__}: {e}"
+        )
+
+        raise HTTPException(
+            status_code=500,
+            detail="Unable to send verification email.",
+        )
+
+    return {
+        "message": "A new verification code has been sent."
     }
 
 
@@ -229,6 +630,10 @@ def login(
 
     email = login_data.username.lower().strip()
 
+    # -----------------------------------------------------
+    # FIND USER
+    # -----------------------------------------------------
+
     user = (
         db.query(User)
         .filter(User.email == email)
@@ -242,6 +647,10 @@ def login(
             detail="Invalid email or password.",
         )
 
+    # -----------------------------------------------------
+    # PASSWORD
+    # -----------------------------------------------------
+
     if not verify_password(
         login_data.password,
         user.password_hash,
@@ -252,9 +661,28 @@ def login(
             detail="Invalid email or password.",
         )
 
+    # -----------------------------------------------------
+    # EMAIL VERIFICATION
+    # -----------------------------------------------------
+
+    if not user.email_verified:
+
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your email before logging in.",
+        )
+
+    # -----------------------------------------------------
+    # CREATE JWT
+    # -----------------------------------------------------
+
     access_token = create_access_token(
         user.id
     )
+
+    # -----------------------------------------------------
+    # FIND PROFILE
+    # -----------------------------------------------------
 
     profile = (
         db.query(Profile)
@@ -321,31 +749,51 @@ def index_profile_in_background(
     profile_id: int,
     profile: ProfileCreate,
 ):
-    """Generate the Jina embedding and update Qdrant after the HTTP response.
+    """
+    Generate the embedding and update Qdrant after
+    the HTTP response.
 
-    Profile creation should not make the user wait for external AI/vector
-    services. If indexing fails, the PostgreSQL profile remains intact.
+    Profile creation should not make the user wait
+    for external AI/vector services.
     """
 
     try:
-        print(f"Starting vector indexing for profile {profile_id}...")
 
-        profile_text, embedding = create_profile_embedding(profile)
+        print(
+            f"Starting vector indexing for profile "
+            f"{profile_id}..."
+        )
+
+        profile_text, embedding = (
+            create_profile_embedding(profile)
+        )
 
         qdrant_point = PointStruct(
             id=profile_id,
+
             vector=embedding,
+
             payload={
                 "profile_id": profile_id,
+
                 "name": profile.name,
+
                 "email": profile.email,
+
                 "phone": profile.phone,
+
                 "institution": profile.institution,
+
                 "degree": profile.degree,
+
                 "year": profile.year,
+
                 "skills": profile.skills,
+
                 "interests": profile.interests,
+
                 "availability": profile.availability,
+
                 "profile": profile_text,
             },
         )
@@ -355,12 +803,16 @@ def index_profile_in_background(
             points=[qdrant_point],
         )
 
-        print(f"Vector indexing completed for profile {profile_id}.")
+        print(
+            f"Vector indexing completed for profile "
+            f"{profile_id}."
+        )
 
     except Exception as e:
-        # Do not break profile creation if Jina/Qdrant temporarily fails.
+
         print(
-            f"Vector indexing failed for profile {profile_id}: "
+            f"Vector indexing failed for profile "
+            f"{profile_id}: "
             f"{type(e).__name__}: {e}"
         )
 
@@ -372,95 +824,159 @@ def index_profile_in_background(
 @app.post("/profiles")
 def create_profile(
     profile: ProfileCreate,
+
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+
+    current_user: User = Depends(
+        get_current_user
+    ),
+
     db: Session = Depends(get_db),
 ):
 
-    # Check if this account already owns a profile.
+    # -----------------------------------------------------
+    # CHECK USER PROFILE
+    # -----------------------------------------------------
+
     existing_user_profile = (
         db.query(Profile)
-        .filter(Profile.user_id == current_user.id)
+        .filter(
+            Profile.user_id == current_user.id
+        )
         .first()
     )
 
     if existing_user_profile:
+
         raise HTTPException(
             status_code=400,
             detail="This account already has a profile.",
         )
 
-    # Check duplicate email.
+    # -----------------------------------------------------
+    # CHECK DUPLICATE EMAIL
+    # -----------------------------------------------------
+
     existing_profile = (
         db.query(Profile)
-        .filter(Profile.email == profile.email)
+        .filter(
+            Profile.email == profile.email
+        )
         .first()
     )
 
     if existing_profile:
+
         raise HTTPException(
             status_code=400,
             detail="A profile with this email already exists.",
         )
 
+    # -----------------------------------------------------
+    # CREATE PROFILE
+    # -----------------------------------------------------
+
     new_profile = Profile(
         user_id=current_user.id,
+
         name=profile.name,
+
         email=profile.email,
+
         phone=profile.phone,
+
         institution=profile.institution,
+
         degree=profile.degree,
+
         year=profile.year,
+
         about=profile.about,
+
         skills=", ".join(profile.skills),
+
         interests=", ".join(profile.interests),
+
         availability=profile.availability,
     )
 
     db.add(new_profile)
+
     db.flush()
 
+    # -----------------------------------------------------
+    # PROJECTS
+    # -----------------------------------------------------
+
     for project in profile.projects:
+
         db.add(
             Project(
                 profile_id=new_profile.id,
+
                 name=project.name,
+
                 description=project.description,
+
                 technologies=project.technologies,
             )
         )
 
     db.commit()
+
     db.refresh(new_profile)
 
-    # IMPORTANT: do not wait for Jina AI or Qdrant.
+    # -----------------------------------------------------
+    # BACKGROUND VECTOR INDEXING
+    # -----------------------------------------------------
+
     background_tasks.add_task(
         index_profile_in_background,
+
         new_profile.id,
+
         profile,
     )
 
     return {
         "message": "Profile created successfully",
+
         "profile": {
+
             "id": new_profile.id,
+
             "name": new_profile.name,
+
             "email": new_profile.email,
+
             "phone": new_profile.phone,
+
             "institution": new_profile.institution,
+
             "degree": new_profile.degree,
+
             "year": new_profile.year,
+
             "about": new_profile.about,
+
             "skills": profile.skills,
+
             "interests": profile.interests,
+
             "availability": profile.availability,
+
             "projects": [
+
                 {
                     "id": project.id,
+
                     "name": project.name,
+
                     "description": project.description,
+
                     "technologies": project.technologies,
                 }
+
                 for project in new_profile.projects
             ],
         },
@@ -479,56 +995,100 @@ def get_profiles(
     profiles = db.query(Profile).all()
 
     if not profiles:
+
         return []
 
-    # Fetch projects once instead of one query per profile (N+1 problem).
-    profile_ids = [profile.id for profile in profiles]
+    # -----------------------------------------------------
+    # FETCH PROJECTS ONCE
+    # -----------------------------------------------------
+
+    profile_ids = [
+        profile.id
+        for profile in profiles
+    ]
 
     all_projects = (
         db.query(Project)
-        .filter(Project.profile_id.in_(profile_ids))
+        .filter(
+            Project.profile_id.in_(profile_ids)
+        )
         .all()
     )
 
     projects_by_profile = {}
 
     for project in all_projects:
+
         projects_by_profile.setdefault(
-            project.profile_id, []
+            project.profile_id,
+            []
         ).append(project)
 
     results = []
 
+    # -----------------------------------------------------
+    # BUILD RESPONSE
+    # -----------------------------------------------------
+
     for profile in profiles:
-        projects = projects_by_profile.get(profile.id, [])
+
+        projects = projects_by_profile.get(
+            profile.id,
+            []
+        )
 
         results.append({
+
             "id": profile.id,
+
             "name": profile.name,
+
             "email": profile.email,
+
             "phone": profile.phone,
+
             "institution": profile.institution,
+
             "degree": profile.degree,
+
             "year": profile.year,
+
             "about": profile.about,
+
             "skills": [
+
                 skill.strip()
+
                 for skill in profile.skills.split(",")
+
                 if skill.strip()
+
             ] if profile.skills else [],
+
             "interests": [
+
                 interest.strip()
+
                 for interest in profile.interests.split(",")
+
                 if interest.strip()
+
             ] if profile.interests else [],
+
             "availability": profile.availability,
+
             "projects": [
+
                 {
                     "id": project.id,
+
                     "name": project.name,
+
                     "description": project.description,
+
                     "technologies": project.technologies,
                 }
+
                 for project in projects
             ],
         })
@@ -550,7 +1110,9 @@ def get_profile(
     profile = (
         db.query(Profile)
 
-        .filter(Profile.id == profile_id)
+        .filter(
+            Profile.id == profile_id
+        )
 
         .first()
     )
@@ -559,7 +1121,6 @@ def get_profile(
 
         raise HTTPException(
             status_code=404,
-
             detail="Profile not found",
         )
 
@@ -592,19 +1153,23 @@ def get_profile(
         "about": profile.about,
 
         "skills": [
+
             skill.strip()
 
             for skill in profile.skills.split(",")
 
             if skill.strip()
+
         ] if profile.skills else [],
 
         "interests": [
+
             interest.strip()
 
             for interest in profile.interests.split(",")
 
             if interest.strip()
+
         ] if profile.interests else [],
 
         "availability": profile.availability,
@@ -612,6 +1177,7 @@ def get_profile(
         "projects": [
 
             {
+
                 "id": project.id,
 
                 "name": project.name,
@@ -633,103 +1199,182 @@ def get_profile(
 @app.put("/profiles/{profile_id}")
 def update_profile(
     profile_id: int,
+
     profile: ProfileCreate,
+
     background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
+
+    current_user: User = Depends(
+        get_current_user
+    ),
+
     db: Session = Depends(get_db),
 ):
 
     existing_profile = (
         db.query(Profile)
-        .filter(Profile.id == profile_id)
+
+        .filter(
+            Profile.id == profile_id
+        )
+
         .first()
     )
 
     if not existing_profile:
+
         raise HTTPException(
             status_code=404,
             detail="Student profile not found.",
         )
 
+    # -----------------------------------------------------
+    # AUTHORIZATION
+    # -----------------------------------------------------
+
     if existing_profile.user_id != current_user.id:
+
         raise HTTPException(
             status_code=403,
             detail="You are not authorized to edit this profile.",
         )
 
+    # -----------------------------------------------------
+    # DUPLICATE EMAIL
+    # -----------------------------------------------------
+
     duplicate_email = (
         db.query(Profile)
+
         .filter(
             Profile.email == profile.email,
+
             Profile.id != profile_id,
         )
+
         .first()
     )
 
     if duplicate_email:
+
         raise HTTPException(
             status_code=400,
             detail="Another profile with this email already exists.",
         )
 
-    existing_profile.name = profile.name
-    existing_profile.email = profile.email
-    existing_profile.phone = profile.phone
-    existing_profile.institution = profile.institution
-    existing_profile.degree = profile.degree
-    existing_profile.year = profile.year
-    existing_profile.about = profile.about
-    existing_profile.skills = ", ".join(profile.skills)
-    existing_profile.interests = ", ".join(profile.interests)
-    existing_profile.availability = profile.availability
+    # -----------------------------------------------------
+    # UPDATE PROFILE
+    # -----------------------------------------------------
 
-    # Replace projects in one transaction.
-    for project in list(existing_profile.projects):
+    existing_profile.name = profile.name
+
+    existing_profile.email = profile.email
+
+    existing_profile.phone = profile.phone
+
+    existing_profile.institution = profile.institution
+
+    existing_profile.degree = profile.degree
+
+    existing_profile.year = profile.year
+
+    existing_profile.about = profile.about
+
+    existing_profile.skills = (
+        ", ".join(profile.skills)
+    )
+
+    existing_profile.interests = (
+        ", ".join(profile.interests)
+    )
+
+    existing_profile.availability = (
+        profile.availability
+    )
+
+    # -----------------------------------------------------
+    # REPLACE PROJECTS
+    # -----------------------------------------------------
+
+    for project in list(
+        existing_profile.projects
+    ):
+
         db.delete(project)
 
     db.flush()
 
     for project in profile.projects:
+
         db.add(
             Project(
                 profile_id=existing_profile.id,
+
                 name=project.name,
+
                 description=project.description,
+
                 technologies=project.technologies,
             )
         )
 
     db.commit()
+
     db.refresh(existing_profile)
 
-    # Re-index asynchronously so the user does not wait for Jina/Qdrant.
+    # -----------------------------------------------------
+    # RE-INDEX
+    # -----------------------------------------------------
+
     background_tasks.add_task(
         index_profile_in_background,
+
         existing_profile.id,
+
         profile,
     )
 
     return {
+
         "message": "Profile updated successfully",
+
         "profile": {
+
             "id": existing_profile.id,
+
             "name": existing_profile.name,
+
             "email": existing_profile.email,
+
             "phone": existing_profile.phone,
+
             "institution": existing_profile.institution,
+
             "degree": existing_profile.degree,
+
             "year": existing_profile.year,
+
             "about": existing_profile.about,
+
             "skills": profile.skills,
+
             "interests": profile.interests,
+
             "availability": profile.availability,
+
             "projects": [
+
                 {
+
                     "id": project.id,
+
                     "name": project.name,
+
                     "description": project.description,
+
                     "technologies": project.technologies,
                 }
+
                 for project in existing_profile.projects
             ],
         },
@@ -748,14 +1393,11 @@ def ai_recommend(
     try:
 
         query_embedding = create_embedding(
-
             search_request.query,
-
             task="retrieval.query",
         )
 
         results = client.query_points(
-
             collection_name=COLLECTION_NAME,
 
             query=query_embedding,
@@ -848,9 +1490,7 @@ def ai_recommend(
             }
 
         recommendation = generate_ai_recommendation(
-
             search_request.query,
-
             profiles,
         )
 
@@ -871,9 +1511,7 @@ def ai_recommend(
         )
 
         raise HTTPException(
-
             status_code=500,
-
             detail=f"AI recommendation failed: {str(e)}",
         )
 
@@ -992,7 +1630,9 @@ def add_team_member(
     team = (
         db.query(Team)
 
-        .filter(Team.id == team_id)
+        .filter(
+            Team.id == team_id
+        )
 
         .first()
     )
@@ -1000,9 +1640,7 @@ def add_team_member(
     if not team:
 
         raise HTTPException(
-
             status_code=404,
-
             detail="Team not found.",
         )
 
@@ -1019,9 +1657,7 @@ def add_team_member(
     if not profile:
 
         raise HTTPException(
-
             status_code=404,
-
             detail="Student profile not found.",
         )
 
@@ -1042,9 +1678,7 @@ def add_team_member(
     if existing_member:
 
         raise HTTPException(
-
             status_code=400,
-
             detail="Student is already a member of this team.",
         )
 
@@ -1120,9 +1754,7 @@ def delete_team_member(
     if not member:
 
         raise HTTPException(
-
             status_code=404,
-
             detail="Team member not found.",
         )
 
@@ -1131,7 +1763,6 @@ def delete_team_member(
     db.commit()
 
     return {
-
         "message": "Team member removed successfully"
     }
 
@@ -1155,7 +1786,9 @@ def delete_team(
     team = (
         db.query(Team)
 
-        .filter(Team.id == team_id)
+        .filter(
+            Team.id == team_id
+        )
 
         .first()
     )
@@ -1163,9 +1796,7 @@ def delete_team(
     if not team:
 
         raise HTTPException(
-
             status_code=404,
-
             detail="Team not found.",
         )
 
@@ -1183,7 +1814,6 @@ def delete_team(
     db.commit()
 
     return {
-
         "message": "Team deleted successfully"
     }
 
