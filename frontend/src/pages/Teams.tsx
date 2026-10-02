@@ -33,7 +33,7 @@ function Teams() {
   // =========================================================
 
   const getToken = () => {
-    return localStorage.getItem("talentos_access_token");
+    return localStorage.getItem("access_token");
   };
 
   const getAuthConfig = () => {
@@ -78,7 +78,7 @@ function Teams() {
           );
 
           localStorage.removeItem(
-            "talentos_access_token"
+            "access_token"
           );
 
           localStorage.removeItem(
@@ -298,7 +298,7 @@ function Teams() {
           );
 
           localStorage.removeItem(
-            "talentos_access_token"
+            "access_token"
           );
 
           localStorage.removeItem(
