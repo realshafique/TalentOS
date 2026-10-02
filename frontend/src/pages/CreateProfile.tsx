@@ -70,7 +70,7 @@ function CreateProfile() {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("talentos_access_token");
+    const token = localStorage.getItem("access_token");
 
     if (!token) {
       navigate("/login");
@@ -179,7 +179,7 @@ function CreateProfile() {
           axios.isAxiosError(error) &&
           error.response?.status === 401
         ) {
-          localStorage.removeItem("talentos_access_token");
+          localStorage.removeItem("access_token");
           navigate("/login");
           return;
         }
@@ -424,7 +424,7 @@ function CreateProfile() {
       setLoading(true);
 
       const token = localStorage.getItem(
-        "talentos_access_token"
+        "access_token"
       );
 
       if (!token) {
@@ -503,7 +503,7 @@ function CreateProfile() {
         axios.isAxiosError(error) &&
         error.response?.status === 401
       ) {
-        localStorage.removeItem("talentos_access_token");
+        localStorage.removeItem("access_token");
         navigate("/login");
         return;
       }
