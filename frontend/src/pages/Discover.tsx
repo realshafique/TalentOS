@@ -149,11 +149,24 @@ function Discover() {
       setStudents([]);
       setRecommendation(null);
 
+      const token = localStorage.getItem("access_token");
+
+      if (!token) {
+        alert("Your session has expired. Please log in again.");
+        window.location.href = "/login";
+        return;
+      }
+
       const response = await axios.post(
         `${API_URL}/ai/recommend`,
         {
           query: query.trim(),
           limit: 5,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
 
@@ -188,6 +201,13 @@ function Discover() {
           "Response:",
           error.response?.data
         );
+
+        if (error.response?.status === 401) {
+          localStorage.removeItem("access_token");
+          alert("Your session has expired. Please log in again.");
+          window.location.href = "/login";
+          return;
+        }
 
         alert(
           error.response?.data?.detail ||
