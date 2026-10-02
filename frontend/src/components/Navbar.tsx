@@ -3,14 +3,14 @@ import { Link, useNavigate } from "react-router-dom";
 function Navbar() {
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("talentos_access_token");
+  const token = localStorage.getItem("access_token");
   const isLoggedIn = Boolean(token);
 
   const handleLogout = () => {
-    localStorage.removeItem("talentos_access_token");
+    localStorage.removeItem("access_token");
     localStorage.removeItem("talentos_profile_id");
 
-    navigate("/login");
+    navigate("/login", { replace: true });
   };
 
   return (
