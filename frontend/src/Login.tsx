@@ -18,7 +18,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // FastAPI OAuth2 login expects form-urlencoded data
+      // FastAPI OAuth2 expects form-urlencoded data
       const formData = new URLSearchParams();
 
       formData.append("username", email.trim());
@@ -34,7 +34,7 @@ export default function Login() {
 
       const data = await response.json();
 
-      // Handle login failure
+      // Login failed
       if (!response.ok) {
         throw new Error(
           typeof data.detail === "string"
@@ -43,7 +43,7 @@ export default function Login() {
         );
       }
 
-      // Backend must return an access token
+      // Make sure backend returned JWT
       if (!data.access_token) {
         throw new Error(
           "Login succeeded but no access token was returned."
@@ -51,42 +51,88 @@ export default function Login() {
       }
 
       // =====================================================
-      // SAVE AUTHENTICATION TOKEN
+      // SAVE TOKEN
       // =====================================================
 
-      // IMPORTANT:
-      // api.ts also reads "access_token"
-      localStorage.setItem(
-        "access_token",
-        data.access_token
-      );
+      localStorage.setItem("access_token", data.access_token);
 
-      // Remove old token key if it exists
+      // Remove old authentication key
       localStorage.removeItem("talentos_access_token");
 
-      // Remove old profile ID
-      localStorage.removeItem("talentos_profile_id");
-
       // =====================================================
-      // SAVE PROFILE ID IF USER ALREADY HAS A PROFILE
+      // SAVE PROFILE ID IF BACKEND RETURNS IT
       // =====================================================
 
-      if (
-        data.user?.profile_id !== null &&
-        data.user?.profile_id !== undefined
-      ) {
+      const profileId =
+        data.user?.profile_id ??
+        data.profile_id ??
+        null;
+
+      if (profileId !== null && profileId !== undefined) {
         localStorage.setItem(
           "talentos_profile_id",
-          String(data.user.profile_id)
+          String(profileId)
         );
 
-        navigate("/profile");
-      } else {
-        // User has not created a profile yet
-        navigate("/create-profile");
+        // Existing profile
+        navigate("/profile", { replace: true });
+        return;
       }
+
+      // =====================================================
+      // NO PROFILE ID
+      // =====================================================
+
+      // Try to find the user's profile using the authenticated
+      // token before deciding that they need to create one.
+
+      try {
+        const profileResponse = await fetch(
+          `${API_URL}/profiles/me`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${data.access_token}`,
+            },
+          }
+        );
+
+        if (profileResponse.ok) {
+          const profileData = await profileResponse.json();
+
+          const foundProfileId =
+            profileData?.id ??
+            profileData?.profile_id ??
+            profileData?.profile?.id ??
+            null;
+
+          if (foundProfileId !== null) {
+            localStorage.setItem(
+              "talentos_profile_id",
+              String(foundProfileId)
+            );
+
+            navigate("/profile", { replace: true });
+            return;
+          }
+        }
+      } catch (profileError) {
+        console.warn(
+          "Could not check existing profile:",
+          profileError
+        );
+      }
+
+      // No existing profile
+      localStorage.removeItem("talentos_profile_id");
+
+      navigate("/create-profile", { replace: true });
     } catch (error) {
       console.error("Login failed:", error);
+
+      // If something went wrong, don't leave a stale token
+      // pretending that the user is logged in.
+      localStorage.removeItem("access_token");
 
       setError(
         error instanceof Error
