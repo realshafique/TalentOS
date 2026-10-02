@@ -67,31 +67,46 @@ function Profile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const savedProfileId = localStorage.getItem(
-          "talentos_profile_id"
-        );
+        const token = localStorage.getItem("access_token");
 
-        if (!savedProfileId) {
-          setLoading(false);
+        if (!token) {
+          window.location.href = "/login";
           return;
         }
+
+        const authHeaders = {
+          Authorization: `Bearer ${token}`,
+        };
+
+        // Always get the current user's profile_id from the backend.
+        // This avoids relying on a stale/missing localStorage profile id.
+        const meResponse = await axios.get(
+          `${API_URL}/auth/me`,
+          {
+            headers: authHeaders,
+          }
+        );
+
+        const profileId = meResponse.data?.profile_id;
+
+        if (!profileId) {
+          setError("No profile found. Create your TalentOS profile first.");
+          return;
+        }
+
+        localStorage.setItem(
+          "talentos_profile_id",
+          String(profileId)
+        );
 
         const response = await axios.get(
-          `${API_URL}/profiles`
+          `${API_URL}/profiles/${profileId}`,
+          {
+            headers: authHeaders,
+          }
         );
 
-        const profiles: ProfileData[] = response.data;
-
-        const foundProfile = profiles.find(
-          (item) => item.id === Number(savedProfileId)
-        );
-
-        if (!foundProfile) {
-          setError("Profile not found.");
-          return;
-        }
-
-        setProfile(foundProfile);
+        setProfile(response.data);
       } catch (error) {
         console.error("Failed to load profile:", error);
 
@@ -105,6 +120,13 @@ function Profile() {
             "Response:",
             error.response?.data
           );
+
+          if (error.response?.status === 401) {
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("talentos_profile_id");
+            window.location.href = "/login";
+            return;
+          }
         }
 
         setError("Unable to load your profile.");
@@ -116,9 +138,6 @@ function Profile() {
     fetchProfile();
   }, []);
 
-  /*
-   * Normalize skills and interests safely.
-   */
   const skills = normalizeList(profile?.skills);
 
   const interests = normalizeList(
@@ -154,7 +173,7 @@ function Profile() {
               No profile found
             </h1>
 
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 whitespace-pre-line text-sm text-slate-500">
               {error ||
                 "Create your TalentOS profile to get started."}
             </p>
@@ -178,8 +197,6 @@ function Profile() {
       <Navbar />
 
       <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-
-        {/* HEADER */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-slate-500">
@@ -199,19 +216,16 @@ function Profile() {
           </Link>
         </div>
 
-        {/* BASIC INFORMATION */}
         <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Basic information
           </h2>
 
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
-
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Name
               </p>
-
               <p className="mt-1 text-sm text-slate-700">
                 {profile.name}
               </p>
@@ -221,7 +235,6 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Degree
               </p>
-
               <p className="mt-1 text-sm text-slate-700">
                 {profile.degree}
               </p>
@@ -231,7 +244,6 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Year
               </p>
-
               <p className="mt-1 text-sm text-slate-700">
                 {profile.year}
               </p>
@@ -241,28 +253,23 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Availability
               </p>
-
               <p className="mt-1 text-sm text-slate-700">
                 {profile.availability}
               </p>
             </div>
-
           </div>
         </section>
 
-        {/* CONTACT */}
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Contact information
           </h2>
 
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
-
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Email
               </p>
-
               <p className="mt-1 text-sm text-slate-700">
                 {profile.email}
               </p>
@@ -272,28 +279,23 @@ function Profile() {
               <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
                 Phone
               </p>
-
               <p className="mt-1 text-sm text-slate-700">
                 {profile.phone || "Not provided"}
               </p>
             </div>
-
           </div>
         </section>
 
-        {/* ABOUT */}
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             About
           </h2>
 
           <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">
-            {profile.about ||
-              "No description provided."}
+            {profile.about || "No description provided."}
           </p>
         </section>
 
-        {/* SKILLS */}
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Skills
@@ -317,7 +319,6 @@ function Profile() {
           )}
         </section>
 
-        {/* INTERESTS */}
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Interests
@@ -341,7 +342,6 @@ function Profile() {
           )}
         </section>
 
-        {/* PROJECTS */}
         <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="text-lg font-semibold text-slate-950">
             Projects
@@ -377,12 +377,10 @@ function Profile() {
             </p>
           )}
         </section>
-
       </main>
 
       <Footer />
     </div>
   );
 }
-
 export default Profile;
