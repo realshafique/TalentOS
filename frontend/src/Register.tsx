@@ -323,7 +323,7 @@ export default function Register() {
   if (otpMode) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
-        <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md items-center">
+        <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl items-center justify-center">
 
           {/* Header */}
           <div className="mb-7 text-center sm:mb-8">
@@ -341,10 +341,10 @@ export default function Register() {
           </div>
 
           {/* OTP Form */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+          <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
           <form
             onSubmit={handleVerifyOTP}
-            className="space-y-5"
+            className="mx-auto w-full max-w-2xl space-y-5"
           >
 
             {/* OTP */}
@@ -441,7 +441,7 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-md items-center">
+      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl items-center justify-center">
 
         {/* Header */}
         <div className="mb-7 text-center sm:mb-8">
@@ -455,10 +455,10 @@ export default function Register() {
         </div>
 
         {/* Register Form */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
         <form
           onSubmit={handleRegister}
-          className="space-y-5"
+          className="mx-auto w-full max-w-2xl space-y-5"
         >
 
           {/* Email */}
