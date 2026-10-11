@@ -322,11 +322,11 @@ export default function Register() {
 
   if (otpMode) {
     return (
-      <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
-        <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl flex-col items-center justify-center gap-6 sm:gap-8 lg:flex-row lg:gap-8">
+      <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
+        <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-3xl flex-col items-center justify-center gap-6 sm:gap-8">
 
           {/* Header */}
-          <div className="w-full max-w-xs text-center lg:mb-0 lg:flex-1">
+          <div className="w-full max-w-xl text-center">
             <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
               Verify Your Email
             </h1>
@@ -341,7 +341,7 @@ export default function Register() {
           </div>
 
           {/* OTP Form */}
-          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:flex-1">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
           <form
             onSubmit={handleVerifyOTP}
             className="w-full space-y-5"
@@ -425,7 +425,7 @@ export default function Register() {
               setError("");
               setSuccess("");
             }}
-            className="mt-6 block w-full text-center text-sm text-slate-500 transition hover:text-slate-950"
+            className="w-full text-center text-sm text-slate-500 transition hover:text-slate-950"
           >
             ← Use a different email
           </button>
@@ -440,11 +440,11 @@ export default function Register() {
   // =====================================================
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl flex-col items-center justify-center gap-6 sm:gap-8 lg:flex-row lg:gap-8">
+    <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-7xl flex-col items-center justify-center gap-6 sm:gap-8 lg:flex-row lg:gap-8">
 
         {/* Header */}
-        <div className="w-full max-w-xs text-center lg:mb-0 lg:flex-1">
+        <div className="w-full max-w-xs text-center lg:flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
             Create Account
           </h1>
