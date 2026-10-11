@@ -323,10 +323,10 @@ export default function Register() {
   if (otpMode) {
     return (
       <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
-        <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl items-center justify-center">
+        <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl flex-col items-center justify-center gap-6 sm:gap-8 lg:flex-row lg:gap-8">
 
           {/* Header */}
-          <div className="mb-7 text-center sm:mb-8">
+          <div className="w-full max-w-xs text-center lg:mb-0 lg:flex-1">
             <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
               Verify Your Email
             </h1>
@@ -341,10 +341,10 @@ export default function Register() {
           </div>
 
           {/* OTP Form */}
-          <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+          <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:flex-1">
           <form
             onSubmit={handleVerifyOTP}
-            className="mx-auto w-full max-w-2xl space-y-5"
+            className="w-full space-y-5"
           >
 
             {/* OTP */}
@@ -399,7 +399,7 @@ export default function Register() {
           </div>
 
           {/* Resend */}
-          <div className="mt-6 text-center">
+          <div className="mt-6 w-full text-center">
             <p className="text-sm text-gray-500">
               Didn't receive the code?
             </p>
@@ -441,10 +441,10 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-10 sm:px-6 sm:py-16">
-      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-5xl items-center justify-center">
+      <div className="mx-auto flex min-h-[calc(100vh-5rem)] w-full max-w-7xl flex-col items-center justify-center gap-6 sm:gap-8 lg:flex-row lg:gap-8">
 
         {/* Header */}
-        <div className="mb-7 text-center sm:mb-8">
+        <div className="w-full max-w-xs text-center lg:mb-0 lg:flex-1">
           <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
             Create Account
           </h1>
@@ -455,10 +455,10 @@ export default function Register() {
         </div>
 
         {/* Register Form */}
-        <div className="w-full rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+        <div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7 lg:flex-1">
         <form
           onSubmit={handleRegister}
-          className="mx-auto w-full max-w-2xl space-y-5"
+          className="w-full space-y-5"
         >
 
           {/* Email */}
@@ -541,7 +541,7 @@ export default function Register() {
         </div>
 
         {/* Login */}
-        <p className="mt-6 text-center text-sm leading-6 text-slate-500">
+        <p className="w-full max-w-xs text-center text-sm leading-6 text-slate-500 lg:flex-1">
           Already have an account?{" "}
 
           <Link
